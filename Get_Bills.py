@@ -1,5 +1,5 @@
-#hello world.  This is a file!
-#Adding a new line to see what happens
+#This pulls bills from the bills API and places data into the congress_bills.db
+#This is version 1.0
 
 import requests
 import sqlite3
