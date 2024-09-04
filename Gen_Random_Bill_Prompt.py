@@ -13,7 +13,6 @@ def select_rand_bill_info():
                     ''')
     return cursor.fetchone()
 
-RESULT = []
 RESULT = select_rand_bill_info()
 
-print(RESULT)
+#print(RESULT)
