@@ -29,6 +29,8 @@ resource_owner_secret = fetch_response.get("oauth_token_secret")
 print("Got OAuth token: %s" % resource_owner_key)
 
 # Get authorization
+
+# UPDATE TO ALWAYS AUTHORIZED
 base_authorization_url = "https://api.twitter.com/oauth/authorize"
 authorization_url = oauth.authorization_url(base_authorization_url)
 print("Please go here and authorize: %s" % authorization_url)
