@@ -1,0 +1,74 @@
+{
+     "congresses": [
+        {
+            "endYear": "2022",
+            "name": "117th Congress",
+            "sessions": [
+                {
+                    "chamber": "House of Representatives",
+                    "endDate": "2022-01-03",
+                    "number": 1,
+                    "startDate": "2021-01-03",
+                    "type": "R"
+                },
+                {
+                    "chamber": "Senate",
+                    "endDate": "2022-01-03",
+                    "number": 1,
+                    "startDate": "2021-01-03",
+                    "type": "R"
+                },
+                {
+                    "chamber": "House of Representatives",
+                    "endDate": null,
+                    "number": 2,
+                    "startDate": "2022-01-03",
+                    "type": "R"
+                },
+                {
+                    "chamber": "Senate",
+                    "endDate": null,
+                    "number": 2,
+                    "startDate": "2022-01-03",
+                    "type": "R"
+                }
+            ],
+            "startYear": "2021"
+        },
+        {
+            "endYear": "2020",
+            "name": "116th Congress",
+            "sessions": [
+                {
+                    "chamber": "House of Representatives",
+                    "endDate": "2020-01-03",
+                    "number": 1,
+                    "startDate": "2019-01-03",
+                    "type": "R"
+                },
+                {
+                    "chamber": "Senate",
+                    "endDate": "2020-01-03",
+                    "number": 1,
+                    "startDate": "2019-01-03",
+                    "type": "R"
+                },
+                {
+                    "chamber": "House of Representatives",
+                    "endDate": "2021-01-03",
+                    "number": 2,
+                    "startDate": "2020-01-03",
+                    "type": "R"
+                },
+                {
+                    "chamber": "Senate",
+                    "endDate": "2021-01-03",
+                    "number": 2,
+                    "startDate": "2020-01-03",
+                    "type": "R"
+                }
+            ],
+            "startYear": "2019"
+        },
+    ],
+}
