@@ -4,3 +4,6 @@ laws.db
 sample_laws.json
 congress_bills.db
 congress.db
+sample_bill.htm
+*.db
+*.htm

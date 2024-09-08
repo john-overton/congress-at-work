@@ -1,0 +1,105 @@
+{
+    "pagination": {
+        "count": 5
+    },
+    "request": {
+        "billNumber": "233",
+        "billType": "s",
+        "billUrl": "https://api.congress.gov/v3/bill/117/s/233?format=json",
+        "congress": "117",
+        "contentType": "application/json",
+        "format": "json"
+    },
+    "textVersions": [
+        {
+            "date": null,
+            "formats": [
+                {
+                    "type": "Formatted Text",
+                    "url": "https://www.congress.gov/117/bills/s233/BILLS-117s233enr.htm"
+                },
+                {
+                    "type": "PDF",
+                    "url": "https://www.congress.gov/117/bills/s233/BILLS-117s233enr.pdf"
+                },
+                {
+                    "type": "Formatted XML",
+                    "url": "https://www.congress.gov/117/bills/s233/BILLS-117s233enr.xml"
+                }
+            ],
+            "type": "Enrolled Bill"
+        },
+        {
+            "date": "2021-10-07T04:00:00Z",
+            "formats": [
+                {
+                    "type": "Formatted Text",
+                    "url": "https://www.congress.gov/117/bills/s233/BILLS-117s233es.htm"
+                },
+                {
+                    "type": "PDF",
+                    "url": "https://www.congress.gov/117/bills/s233/BILLS-117s233es.pdf"
+                },
+                {
+                    "type": "Formatted XML",
+                    "url": "https://www.congress.gov/117/bills/s233/BILLS-117s233es.xml"
+                }
+            ],
+            "type": "Engrossed in Senate"
+        },
+        {
+            "date": "2021-09-22T04:00:00Z",
+            "formats": [
+                {
+                    "type": "Formatted Text",
+                    "url": "https://www.congress.gov/117/bills/s233/BILLS-117s233rs.htm"
+                },
+                {
+                    "type": "PDF",
+                    "url": "https://www.congress.gov/117/bills/s233/BILLS-117s233rs.pdf"
+                },
+                {
+                    "type": "Formatted XML",
+                    "url": "https://www.congress.gov/117/bills/s233/BILLS-117s233rs.xml"
+                }
+            ],
+            "type": "Reported to Senate"
+        },
+        {
+            "date": "2021-02-04T05:00:00Z",
+            "formats": [
+                {
+                    "type": "Formatted Text",
+                    "url": "https://www.congress.gov/117/bills/s233/BILLS-117s233is.htm"
+                },
+                {
+                    "type": "PDF",
+                    "url": "https://www.congress.gov/117/bills/s233/BILLS-117s233is.pdf"
+                },
+                {
+                    "type": "Formatted XML",
+                    "url": "https://www.congress.gov/117/bills/s233/BILLS-117s233is.xml"
+                }
+            ],
+            "type": "Introduced in Senate"
+        },
+        {
+            "date": "2022-05-06T03:59:59Z",
+            "formats": [
+                {
+                    "type": "Formatted Text",
+                    "url": "https://www.congress.gov/117/plaws/publ115/PLAW-117publ115.htm"
+                },
+                {
+                    "type": "PDF",
+                    "url": "https://www.congress.gov/117/plaws/publ115/PLAW-117publ115.pdf"
+                },
+                {
+                    "type": "Formatted XML",
+                    "url": "https://www.congress.gov/117/plaws/publ115/PLAW-117publ115_uslm.xml"
+                }
+            ],
+            "type": "Public Law"
+        }
+    ]
+}
