@@ -3,7 +3,7 @@ import pandas as pd
 from datetime import datetime, timedelta
 
 # Load the JSON data
-with open('C:\\temp\\twitter_data_20240906_140759.json', 'r') as file:
+with open('C:\\temp\\twitter_data_20240906_145032.json', 'r') as file:
     json_data = json.load(file)
 
 # Extract the tweet data
@@ -16,13 +16,13 @@ df = pd.DataFrame(tweet_data)
 df['start'] = pd.to_datetime(df['start'])
 
 # Create a function to round down to the nearest 5-minute interval
-def round_down_to_5min(dt):
-    return dt - timedelta(minutes=dt.minute % 5,
+def round_up_to_5min(dt):
+    return dt - timedelta(minutes=dt.minute % -5,
                           seconds=dt.second,
                           microseconds=dt.microsecond)
 
 # Apply the rounding function to create a new column for grouping
-df['group_start'] = df['start'].apply(round_down_to_5min)
+df['group_start'] = df['start'].apply(round_up_to_5min)
 
 # Group by the 5-minute intervals and sum the tweet counts
 grouped_df = df.groupby('group_start')['tweet_count'].sum().reset_index()

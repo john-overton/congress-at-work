@@ -7,7 +7,7 @@ from keys import bearer_token
 # URL and headers
 # Use: https://developer.twitter.com/apitools/api?endpoint=%2F2%2Ftweets%2Fcounts%2Frecent&method=get as reference or help generating url
 
-url = "https://api.twitter.com/2/tweets/counts/recent?query=%23GME%20OR%20GME%20OR%20Gamestop&start_time=2024-09-06T10:00:00.000Z&end_time=2024-09-06T16:00:00.000Z&granularity=minute&search_count.fields=tweet_count"
+url = "https://api.twitter.com/2/tweets/counts/recent?query=%23GME%20OR%20GME%20OR%20Gamestop&start_time=2024-09-06T13:30:00.000Z&end_time=2024-09-06T19:00:00.000Z&granularity=minute&search_count.fields=tweet_count"
 
 # Headers with the bearer token
 headers = {
