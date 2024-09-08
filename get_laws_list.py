@@ -6,7 +6,6 @@ import keys
 import logging
 import json
 from collections import deque
-import os
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
