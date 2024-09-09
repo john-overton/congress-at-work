@@ -6,6 +6,16 @@ import sqlite3
 from datetime import datetime
 import requests
 from pathlib import Path
+import logging
+from urllib3.exceptions import HTTPError as URLLibHTTPError
+import time
+
+# Delay constants
+DELAY_BETWEEN_CALLS = 1  # 1 second delay between API calls
+RETRY_DELAY = 60  # 60 second retry delay on connection error
+
+# Set up logging
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Database and folder configuration
 DB_NAME = "bill_url_list.db"
@@ -20,12 +30,18 @@ def get_bill_urls(conn):
     return cursor.fetchall()
 
 def save_html_content(url, filename):
-    response = requests.get(url)
-    if response.status_code == 200:
+    try:
+        logging.info(f"Attempting to fetch URL: {url}")
+        response = requests.get(url, timeout=30)  # Add a timeout
+        response.raise_for_status()  # Raise an exception for bad status codes
+        
         with open(filename, 'w', encoding='utf-8') as f:
             f.write(response.text)
+        logging.info(f"Successfully saved content to {filename}")
         return True
-    return False
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Failed to fetch or save URL {url}. Error: {str(e)}")
+        return False
 
 def delete_outdated_files(conn):
     cursor = conn.cursor()
@@ -74,12 +90,17 @@ def main():
                 full_path = os.path.join(OUTPUT_FOLDER, filename)
                 
                 if save_html_content(url, full_path):
-                    print(f"Saved: {filename}")
+                    logging.info(f"Saved: {filename}")
                 else:
-                    print(f"Failed to save: {filename}")
+                    logging.error(f"Failed to save: {filename}")
+                
+                time.sleep(DELAY_BETWEEN_CALLS)
+            
             else:
-                print(f"File already exists for {congress}.{bill_type}.{bill_number}.{formatted_date}")
+                logging.info(f"File already exists for {congress}.{bill_type}.{bill_number}.{formatted_date}")
 
+    except Exception as e:
+        logging.exception("An unexpected error occurred:")
     finally:
         conn.close()
 
