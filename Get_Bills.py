@@ -1,4 +1,4 @@
-#This pulls bills from the bills API and places data into the congress_bills.db
+#This pulls bills from the bills API located here: https://gpo.congress.gov/#/bill/bill_list_all and places data into the congress_bills.db
 #This is version 1.0
 
 import requests
@@ -94,22 +94,22 @@ def bills_count():
 # Main function that performs all subfunctions
 
 def main():
-    create_database() # Creates database if it doesn't exist
-    total_bills = bills_count() # Define total bills as int with default value of 0
-    offset = 0 # Offset override
-    limit = 100 # Fetch limit override
+    create_database() 
+    total_bills = bills_count() 
+    offset = 0 
+    limit = 100 
 
     while total_bills < 100:
         try:
-            bills = fetch_bills(offset, limit) # STEP 1: Recursively fetch bills until limit and if no bills returned then break
+            bills = fetch_bills(offset, limit) 
             if not bills:
                 break
 
-            insert_bills(bills) # STEP 2: Insert bills into bills table, count total returned bills, and add limit to offset 
+            insert_bills(bills) 
             total_bills += len(bills)
             offset += limit
 
-            print(f"Fetched and inserted {len(bills)} bills. Total: {total_bills}") # STEP 3 Print total number of fetched bills
+            print(f"Fetched and inserted {len(bills)} bills. Total: {total_bills}") 
 
             if len(bills) < limit:
                 break

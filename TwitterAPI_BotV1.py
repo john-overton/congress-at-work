@@ -1,3 +1,6 @@
+# This is the first version of the twitter bot.  This uses oath1 and requires handshake each time it runs.  This code came diectly from the twitter github 
+# Reference: https://github.com/xdevplatform/Twitter-API-v2-sample-code/blob/main/Manage-Tweets/create_tweet.py
+
 from requests_oauthlib import OAuth1Session
 import json
 import keys

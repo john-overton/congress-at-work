@@ -1,3 +1,6 @@
+# This python script pulls the latest HTML bill text based on the bill_url_list.db data.
+# It does this by getting the bill URL text, comparing the db action dates against the date of existing files, and then scrapes the URL if data is new.
+
 import os
 import sqlite3
 from datetime import datetime

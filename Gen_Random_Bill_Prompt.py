@@ -1,3 +1,6 @@
+# This script pulls a random set of text from an existing dataset
+# This is version 1.0
+
 import sqlite3
 
 DB_NAME = "congress_bills.db"
@@ -15,4 +18,5 @@ def select_rand_bill_info():
 
 RESULT = select_rand_bill_info()
 
-#print(RESULT)
+# To test live in your terminal uncomment the code below
+# print(RESULT)

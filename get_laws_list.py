@@ -1,3 +1,6 @@
+# This python script pull laws from congress.gov using this API: https://gpo.congress.gov/#/bill/law_list_by_congress_lawType_and_lawNumber
+# This is version 1.0
+
 import requests
 import sqlite3
 import time

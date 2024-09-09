@@ -1,3 +1,6 @@
+# This API pulls bill text urls from the congress.gov API located here: https://gpo.congress.gov/#/bill/bill_text
+# This is version 1.0
+
 import sqlite3
 import requests
 from datetime import datetime

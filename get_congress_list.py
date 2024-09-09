@@ -1,3 +1,6 @@
+# This python script gets a list of all congress sessions, congresses, and creates a dataset.  This data is pulled from congress.gov API located here: https://gpo.congress.gov/#/congress/congress_list1
+# This is version 1.0 of the script
+
 import requests
 import sqlite3
 import time

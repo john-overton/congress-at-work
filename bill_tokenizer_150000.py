@@ -1,3 +1,7 @@
+# This pulls data from html files in bill_text.htm folder creates a unique DB per bill html file, and splits to content of the HTML file into token chunks based on the defined size.
+# This is useful for splitting up data into chunks that fit within the context window of certain LLM's
+# The 150,000 token size context of this file is to allow chunks to be processed by Anthropics Claude 3.5 Sonnet which has a context of 200,000 tokens
+
 import os
 import sqlite3
 import re
@@ -6,6 +10,9 @@ from datetime import datetime
 import nltk
 nltk.download('punkt_tab')
 from nltk.tokenize import word_tokenize
+
+# constraints
+token_max_size = 150000
 
 def create_database(db_path):
     conn = sqlite3.connect(db_path)
@@ -44,7 +51,7 @@ def insert_tokens(conn, congress, bill_type, bill_number, tokens):
     current_time = datetime.now().isoformat()
     
     # Split tokens into chunks of 150,000 or fewer
-    chunk_size = 150000
+    chunk_size = token_max_size
     for i in range(0, len(tokens), chunk_size):
         chunk = tokens[i:i+chunk_size]
         token_count = len(chunk)
