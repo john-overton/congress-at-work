@@ -19,4 +19,4 @@ def select_rand_bill_info():
 RESULT = select_rand_bill_info()
 
 # To test live in your terminal uncomment the code below
-# print(RESULT)
+#print(RESULT[0])
