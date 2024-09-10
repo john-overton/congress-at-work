@@ -25,7 +25,9 @@ def create_database(db_path):
             tokenized_date TIMESTAMP,
             token_count INTEGER,
             text_part INTEGER,
-            bill_text TEXT
+            bill_text TEXT,
+            prompt_text TEXT,
+            prompt_response TEXT
         )
     ''')
     conn.commit()
