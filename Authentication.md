@@ -1,18 +1,44 @@
 # X/Twitter OAuth 2.0 Authentication Process
 
-This document outlines the OAuth 2.0 authentication flow implemented for the X/Twitter bot application. The process involves interaction between the main bot script, a local OAuth callback server, and X/Twitter's OAuth endpoints.
+This document outlines the OAuth 2.0 authentication flow implemented for the X/Twitter bot application. The process involves interaction between a local OAuth callback server, the main bot script, and X/Twitter's OAuth endpoints.
 
 ## Components
 
-1. **Main Bot Script**: Initiates the authentication process and handles tweet posting.
-2. **Local OAuth Callback Server**: Manages the OAuth callback and token exchange.
+1. **Local OAuth Callback Server**: Manages the OAuth callback and token exchange. This server must be running before the authentication process begins.
+2. **Main Bot Script**: Initiates the authentication process and handles tweet posting.
 3. **X/Twitter OAuth Endpoints**: Handles authorization and token issuance.
+
+## Startup Order
+
+It's crucial to note that the components must be started in the following order:
+
+1. Start the Local OAuth Callback Server
+2. Run the Main Bot Script
+3. X/Twitter OAuth Endpoints are accessed as needed during the process
+
+This order ensures that the callback server is ready to handle redirects from X/Twitter when the bot script initiates the authentication process.
 
 ## Authentication Flow
 
-### 1. Initialization
+### 1. Local Server Initialization
 
-The main bot script checks for a valid access token:
+Before any authentication attempts, the local OAuth callback server must be started:
+
+```bash
+python oauth_server.py
+```
+
+This server listens on `http://127.0.0.1:3000` and handles the OAuth callback.
+
+### 2. Bot Script Initialization
+
+The main bot script is then run:
+
+```bash
+python twitter_bot.py
+```
+
+The script first checks for a valid access token:
 
 ```python
 access_token = get_valid_access_token()
@@ -151,4 +177,4 @@ The application requests the following scopes:
 
 ## Conclusion
 
-This OAuth 2.0 flow provides a secure method for the bot to obtain and maintain authorization to post tweets on behalf of the user. The use of a local server facilitates the callback handling and token exchange process, creating a seamless authentication experience.
+This OAuth 2.0 flow provides a secure method for the bot to obtain and maintain authorization to post tweets on behalf of the user. The use of a local server facilitates the callback handling and token exchange process, creating a seamless authentication experience. Remember that the local OAuth callback server must be running before the main bot script is executed to ensure proper authentication flow.
