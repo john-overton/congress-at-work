@@ -8,7 +8,6 @@ sample_bill.htm
 *.db
 *.htm
 keys.py
-keys
 test_random.py
 __pycache__
 x_tokens.json

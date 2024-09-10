@@ -1,5 +1,5 @@
 # This API pulls bill text urls from the congress.gov API located here: https://gpo.congress.gov/#/bill/bill_text
-# This is version 1.0
+# This is version 2.0 and now includes xml and pdf urls
 
 import sqlite3
 import requests
@@ -31,6 +31,8 @@ def create_target_table():
                 congress TEXT,
                 latest_date TEXT,
                 formatted_text_url TEXT,
+                formatted_xml_url TEXT,
+                pdf_url TEXT,
                 PRIMARY KEY (bill_number, bill_type, congress)
             )
         """)
@@ -55,19 +57,24 @@ def fetch_bill_data(congress, bill_type, bill_number):
         logging.error(f"API request failed: {e}")
         return None
 
-def get_latest_formatted_text(text_versions):
+def get_latest_formatted_urls(text_versions):
     latest_date = None
-    latest_url = None
+    latest_urls = {
+        "Formatted Text": None,
+        "Formatted XML": None,
+        "PDF": None
+    }
     for version in text_versions:
         date = version.get('date')
         if date:
             date = datetime.strptime(date, "%Y-%m-%dT%H:%M:%SZ")
-            for format in version['formats']:
-                if format['type'] == "Formatted Text":
-                    if not latest_date or date > latest_date:
-                        latest_date = date
-                        latest_url = format['url']
-    return latest_date.strftime("%Y-%m-%dT%H:%M:%SZ") if latest_date else None, latest_url
+            if not latest_date or date > latest_date:
+                latest_date = date
+                for format in version['formats']:
+                    if format['type'] in latest_urls:
+                        latest_urls[format['type']] = format['url']
+    
+    return latest_date.strftime("%Y-%m-%dT%H:%M:%SZ") if latest_date else None, latest_urls
 
 def main():
     create_target_table()
@@ -84,17 +91,20 @@ def main():
             bill_data = fetch_bill_data(congress, bill_type, bill_number)
             
             if bill_data and 'textVersions' in bill_data:
-                latest_date, formatted_text_url = get_latest_formatted_text(bill_data['textVersions'])
-                if latest_date and formatted_text_url:
+                latest_date, latest_urls = get_latest_formatted_urls(bill_data['textVersions'])
+                if latest_date:
                     target_cursor.execute('''
                         INSERT OR REPLACE INTO bill_urls 
-                        (bill_number, bill_type, congress, latest_date, formatted_text_url)
-                        VALUES (?, ?, ?, ?, ?)
-                    ''', (bill_number, bill_type, congress, latest_date, formatted_text_url))
+                        (bill_number, bill_type, congress, latest_date, formatted_text_url, formatted_xml_url, pdf_url)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                    ''', (bill_number, bill_type, congress, latest_date, 
+                          latest_urls["Formatted Text"], 
+                          latest_urls["Formatted XML"], 
+                          latest_urls["PDF"]))
                     target_conn.commit()
                     logging.info(f"Inserted/Updated data for bill {bill_type}{bill_number} in congress {congress}")
                 else:
-                    logging.warning(f"No formatted text URL found for bill {bill_type}{bill_number} in congress {congress}")
+                    logging.warning(f"No formatted URLs found for bill {bill_type}{bill_number} in congress {congress}")
             else:
                 logging.warning(f"No text versions found for bill {bill_type}{bill_number} in congress {congress}")
             
