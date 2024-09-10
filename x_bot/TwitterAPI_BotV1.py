@@ -4,7 +4,7 @@
 from requests_oauthlib import OAuth1Session
 import json
 import keys
-import Gen_Random_Bill_Prompt
+import x_bot.Gen_Random_Bill_Prompt as Gen_Random_Bill_Prompt
 
 # In your terminal please set your environment variables by running the following lines of code.
 # export 'CONSUMER_KEY'='<your_consumer_key>'

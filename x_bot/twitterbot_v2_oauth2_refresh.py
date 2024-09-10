@@ -5,7 +5,7 @@ import os
 import requests
 from urllib.parse import urlencode
 import keys
-import Gen_Random_Bill_Prompt
+import x_bot.Gen_Random_Bill_Prompt as Gen_Random_Bill_Prompt
 import time
 import webbrowser
 

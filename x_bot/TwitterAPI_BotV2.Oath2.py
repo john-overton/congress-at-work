@@ -6,7 +6,7 @@ import secrets
 import requests
 from urllib.parse import urlencode
 import keys
-import Gen_Random_Bill_Prompt
+import x_bot.Gen_Random_Bill_Prompt as Gen_Random_Bill_Prompt
 
 # Twitter API endpoints
 AUTH_URL = "https://twitter.com/i/oauth2/authorize"
