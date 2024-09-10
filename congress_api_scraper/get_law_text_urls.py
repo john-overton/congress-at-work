@@ -6,16 +6,36 @@ import requests
 from datetime import datetime
 import logging
 import time
-import keys
+import sys
+import os
+
+
+# Get the absolute path of the script
+script_path = os.path.abspath(__file__)
+
+# Get the directory containing the script
+script_dir = os.path.dirname(script_path)
+
+# Get the parent directory (cong-scrape-1)
+parent_dir = os.path.dirname(script_dir)
+
+# Construct the path to the keys.py file
+keys_path = os.path.join(parent_dir, 'keys', 'keys.py')
+
+# Add the directory containing keys.py to sys.path
+sys.path.append(os.path.dirname(keys_path))
+
+# Import the Key_1 from keys.py
+from keys import Key_1
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Constants
 API_BASE_URL = "https://api.congress.gov/v3/bill"
-API_KEY = keys.Key_1
-SOURCE_DB = "laws.db"
-TARGET_DB = "bill_url_list.db"
+API_KEY = Key_1
+SOURCE_DB = os.path.join(script_dir, "laws.db")
+TARGET_DB = os.path.join(script_dir, "bill_url_list.db")
 TARGET_TABLE = "bill_urls"
 DELAY_BETWEEN_CALLS = 1  # 1 second delay between API calls
 RETRY_DELAY = 60  # 60 second retry delay on connection error
