@@ -1,0 +1,46 @@
+{
+    "bills": [
+       {
+            "congress": 118,
+            "latestAction": {
+                "actionDate": "2023-03-20",
+                "text": "Became Public Law No: 118-1."
+             },
+             "laws": [
+                 {
+                     "number": "118-1",
+                     "type": "Public Law"
+                 }
+             ]
+             "number": "26",
+             "originChamber": "House",
+             "originChamberCode": "H",
+             "title": "Disapproving the action of the District of Columbia Council in approving the Revised Criminal Code Act of 2022.",
+             "type": "HJRES",
+             "updateDate": "2024-03-18",
+             "updateDateIncludingText": "2024-03-18T20:28:27Z",
+             "url": "http://api.congress.gov/v3/bill/118/hjres/26?format=json"
+       },
+       {
+            "congress": 118,
+            "latestAction": {
+                "actionDate": "2023-07-26",
+                "text": "Became Public Law No: 118-10."
+            },
+            "laws": [
+                 {
+                     "number": "118-1",
+                     "type": "Public Law"
+                 }
+             ]
+            "number": "1096",
+            "originChamber": "House",
+            "originChamberCode": "H",
+            "title": "250th Anniversary of the United States Marine Corps Commemorative Coin Act",
+            "type": "HR",
+            "updateDate": "2024-03-18",
+            "updateDateIncludingText": "2024-03-18T21:14:03Z",
+            "url": "http://api.congress.gov/v3/bill/118/hr/1096?format=json"
+         },
+    ],
+ }

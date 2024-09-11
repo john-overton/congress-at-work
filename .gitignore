@@ -1,10 +1,6 @@
-tweet_counts_5min_grouped.xlsx
 api_log.json
-laws.db
-sample_laws.json
 congress_bills.db
 congress.db
-sample_bill.htm
 *.db
 *.htm
 keys.py
