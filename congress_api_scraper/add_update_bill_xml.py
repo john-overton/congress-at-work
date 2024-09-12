@@ -1,14 +1,14 @@
-# This python script pulls the latest HTML bill text based on the bill_url_list.db data.
-# It does this by getting the bill URL text, comparing the db action dates against the date of existing files, and then scrapes the URL if data is new.
+# This python script pulls the latest xml bill text based on the bill_url_list.db data.
+# It does this by getting the bill URL xml, comparing the db action dates against the date of existing files, and then scrapes the URL if data is new.
 
 import os
-import sys
 import sqlite3
 from datetime import datetime
 import requests
 from pathlib import Path
 import logging
 import time
+import sys
 
 # Delay constants
 DELAY_BETWEEN_CALLS = 1  # 1 second delay between API calls
@@ -22,7 +22,7 @@ logging.basicConfig(level=logging.DEBUG,
 
 # Database and folder configuration
 DB_NAME = "bill_url_list.db"
-OUTPUT_FOLDER = "bill_text.htm"
+OUTPUT_FOLDER = "bill_text.xml"
 
 # Get the directory of the script
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -36,10 +36,10 @@ def connect_to_db():
 
 def get_bill_urls(conn):
     cursor = conn.cursor()
-    cursor.execute("SELECT congress, bill_type, bill_number, latest_date, formatted_text_url FROM bill_urls")
+    cursor.execute("SELECT congress, bill_type, bill_number, latest_date, formatted_xml_url FROM bill_urls")
     return cursor.fetchall()
 
-def save_html_content(url, filename):
+def save_xml_content(url, filename):
     try:
         logging.info(f"Attempting to fetch URL: {url}")
         response = requests.get(url, timeout=30)  # Add a timeout
@@ -83,7 +83,7 @@ def file_exists(congress, bill_type, bill_number, formatted_date):
     return False
 
 def main():
-    logging.info("Starting HTM Bill Scraper")
+    logging.info("Starting XML Bill Scraper")
     conn = connect_to_db()
     try:
         # Ensure output folder exists
@@ -94,7 +94,7 @@ def main():
         # Delete outdated files
         delete_outdated_files(conn)
 
-        # Fetch and save new/updated HTML content
+        # Fetch and save new/updated XML content
         bill_urls = get_bill_urls(conn)
         logging.info(f"Found {len(bill_urls)} bills to process")
         for congress, bill_type, bill_number, latest_date, url in bill_urls:
@@ -102,10 +102,10 @@ def main():
             
             if not file_exists(congress, bill_type, bill_number, formatted_date):
                 current_date = datetime.now().strftime("%Y-%m-%d-%H%M")
-                filename = f"{congress}.{bill_type}.{bill_number}.{formatted_date}.{current_date}.htm"
+                filename = f"{congress}.{bill_type}.{bill_number}.{formatted_date}.{current_date}.xml"
                 full_path = os.path.join(output_dir, filename)
                 
-                if save_html_content(url, full_path):
+                if save_xml_content(url, full_path):
                     logging.info(f"Saved: {filename}")
                 else:
                     logging.error(f"Failed to save: {filename}")
@@ -119,8 +119,8 @@ def main():
         logging.exception("An unexpected error occurred:")
     finally:
         conn.close()
-
-    logging.info("HTM Bill Scraper completed")
+    
+    logging.info("XML Bill Scraper completed")
 
 if __name__ == "__main__":
     main()
