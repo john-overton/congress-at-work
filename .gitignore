@@ -10,3 +10,4 @@ x_tokens.json
 logs
 *.xml
 bill_scraper.log
+script_runner.log
