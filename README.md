@@ -1,6 +1,6 @@
-## cong-scrape
+# **cong-scrape**
 
-# Congress.gov Twitter Bot MVP Features
+## Congress.gov Twitter Bot MVP Features
 
 For an MVP of a Twitter bot that distills information from congress.gov about existing laws and future legislation, here are some key functionalities to consider:
 
@@ -34,7 +34,7 @@ For an MVP of a Twitter bot that distills information from congress.gov about ex
 9. **Error handling:**
    - Implement robust error handling for API calls and data processing
 
-# Congress.gov Twitter Bot Tweet Topics
+## Congress.gov Twitter Bot Tweet Topics
 
 A full list of tweet topics the x/twitter bot should employ
 
