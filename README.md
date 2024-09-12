@@ -1,4 +1,4 @@
-# cong-scrape
+### cong-scrape
 
 # Congress.gov Twitter Bot MVP Features
 
@@ -34,55 +34,57 @@ For an MVP of a Twitter bot that distills information from congress.gov about ex
 9. **Error handling:**
    - Implement robust error handling for API calls and data processing
 
-   # Congress.gov Twitter Bot Tweet Topics
+# Congress.gov Twitter Bot Tweet Topics
 
-## 1. New Bill Introductions
-- Brief summaries of newly introduced bills
-- Key sponsors and co-sponsors
-- Main objectives of the proposed legislation
+A full list of tweet topics the x/twitter bot should employ
 
-## 2. Bill Status Updates
-- Progress of bills through committees
-- Upcoming votes in the House or Senate
-- Results of key votes
+1. **New Bill Introductions**
+    - Brief summaries of newly introduced bills
+    - Key sponsors and co-sponsors
+    - Main objectives of the proposed legislation
 
-## 3. Law Enactments
-- Announcements when bills are signed into law
-- Brief explanations of what the new law does
-- Effective dates of new laws
+2. **Bill Status Updates**
+    - Progress of bills through committees
+    - Upcoming votes in the House or Senate
+    - Results of key votes
 
-## 4. Committee Hearings
-- Upcoming important committee hearings
-- Summaries of key testimony from hearings
+3. **Law Enactments**
+    - Announcements when bills are signed into law
+    - Brief explanations of what the new law does
+    - Effective dates of new laws
 
-## 5. Amendments to Existing Laws
-- Proposed changes to current legislation
-- Explanations of how amendments might impact existing laws
+4. **Committee Hearings**
+    - Upcoming important committee hearings
+    - Summaries of key testimony from hearings
 
-## 6. Bipartisan Efforts
-- Highlight bills with strong bipartisan support
-- Cross-party collaborations on legislation
+5. **Amendments to Existing Laws**
+    - Proposed changes to current legislation
+    - Explanations of how amendments might impact existing laws
 
-## 7. Controversial Legislation
-- Outline key points of debate on contentious bills
-- Present different perspectives on divisive issues
+6. **Bipartisan Efforts**
+    - Highlight bills with strong bipartisan support
+    - Cross-party collaborations on legislation
 
-## 8. Budget and Appropriations
-- Updates on budget proposals and negotiations
-- Key spending allocations in appropriations bills
+7. **Controversial Legislation**
+    - Outline key points of debate on contentious bills
+    - Present different perspectives on divisive issues
 
-## 9. Explanations of Existing Laws
-- "Did you know?" tweets about current laws
-- Clarifications on commonly misunderstood legislation
+8. **Budget and Appropriations**
+    - Updates on budget proposals and negotiations
+    - Key spending allocations in appropriations bills
 
-## 10. Legislative Calendars
-- Important upcoming dates in the legislative process
-- Deadlines for key bills or budget approvals
+9. **Explanations of Existing Laws**
+    - "Did you know?" tweets about current laws
+    - Clarifications on commonly misunderstood legislation
 
-## 11. Member Activity
-- Notable speeches or statements from members of Congress
-- Voting records on significant legislation
+10. **Legislative Calendars**
+    - Important upcoming dates in the legislative process
+    - Deadlines for key bills or budget approvals
 
-## 12. Public Engagement Opportunities
-- Information on how constituents can provide input on bills
-- Deadlines for public comments on proposed regulations
+11. **Member Activity**
+    - Notable speeches or statements from members of Congress
+    - Voting records on significant legislation
+
+12. **Public Engagement Opportunities**
+    - Information on how constituents can provide input on bills
+    - Deadlines for public comments on proposed regulations
