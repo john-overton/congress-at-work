@@ -1,10 +1,16 @@
 #This pulls bills from the bills API located here: https://gpo.congress.gov/#/bill/bill_list_all and places data into the congress_bills.db
-#This is version 1.0
+#This is version 1.2
 
 import requests
 import sqlite3
 from datetime import datetime, timedelta
 import time
+import sys
+import os
+
+# Add the adjacent 'keys' folder to the Python path
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'keys'))
+
 import keys
 
 # API configuration
@@ -12,7 +18,7 @@ API_BASE_URL = "https://api.congress.gov/v3/bill"
 API_KEY = keys.Key_1
 
 # Database configuration
-DB_NAME = "congress_bills.db"
+DB_NAME = os.path.join(os.getcwd(), "congress_bills.db")
 
 def create_database():
     conn = sqlite3.connect(DB_NAME)

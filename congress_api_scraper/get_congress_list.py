@@ -1,11 +1,17 @@
 # This python script gets a list of all congress sessions, congresses, and creates a dataset.  This data is pulled from congress.gov API located here: https://gpo.congress.gov/#/congress/congress_list1
-# This is version 1.0 of the script
+# This is version 1.2 of the script
 
 import requests
 import sqlite3
 import time
-import keys
 import re
+import sys
+import os
+
+# Add the adjacent 'keys' folder to the Python path
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'keys'))
+
+import keys
 
 # API configuration
 API_BASE_URL = "https://api.congress.gov/v3/congress"
@@ -14,7 +20,7 @@ FORMAT = "json"
 LIMIT = 250
 
 # Database configuration
-DB_NAME = "congress.db"
+DB_NAME = os.path.join(os.getcwd(), "congress.db")
 TABLE_NAME = "congress_list"
 
 def create_database():

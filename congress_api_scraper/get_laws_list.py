@@ -1,14 +1,20 @@
 # This python script pull laws from congress.gov using this API: https://gpo.congress.gov/#/bill/law_list_by_congress_lawType_and_lawNumber
-# This is version 1.0
+# This is version 1.1
 
 import requests
 import sqlite3
 import time
 from typing import List, Dict, Any
-import keys
 import logging
 import json
 from collections import deque
+import sys
+import os
+
+# Add the adjacent 'keys' folder to the Python path
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'keys'))
+
+import keys
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -20,7 +26,7 @@ LIMIT = 250  # Maximum allowed by the API
 CONGRESS_DB = "congress.db"
 
 # Database configuration
-DB_NAME = "laws.db"
+DB_NAME = os.path.join(os.getcwd(), "laws.db")
 TABLE_NAME = "law_list"
 
 # Trailing log setup
