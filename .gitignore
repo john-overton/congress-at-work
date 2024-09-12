@@ -8,3 +8,5 @@ test_random.py
 __pycache__
 x_tokens.json
 logs
+*.xml
+bill_scraper.log
