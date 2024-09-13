@@ -49,40 +49,29 @@ def parse_filename(filename):
 def tokenize_text(text):
     return word_tokenize(text)
 
-def insert_tokens(conn, congress, bill_type, bill_number, content_blocks):
+def insert_tokens(conn, congress, bill_type, bill_number, content):
     cursor = conn.cursor()
     current_time = datetime.now().isoformat()
     
-    text_part = 1
-    current_tokens = []
+    tokens = tokenize_text(content)
+    text_parts = []
+    current_part = []
     
-    for block in content_blocks:
-        block_tokens = tokenize_text(block['text'])
-        
-        if len(current_tokens) + len(block_tokens) > token_max_size:
-            # Insert the current tokens
-            text = ' '.join(current_tokens)
-            cursor.execute('''
-                INSERT INTO bill_text (congress, bill_type, bill_number, tokenized_date, token_count, text_part, bill_text)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            ''', (congress, bill_type, bill_number, current_time, len(current_tokens), text_part, text))
-            
-            text_part += 1
-            current_tokens = block_tokens
+    for token in tokens:
+        if len(current_part) + 1 > token_max_size:
+            text_parts.append(' '.join(current_part))
+            current_part = [token]
         else:
-            current_tokens.extend(block_tokens)
-        
-        # Add closing tag if present
-        if block['closing_tag']:
-            current_tokens.extend(tokenize_text(block['closing_tag']))
+            current_part.append(token)
     
-    # Insert any remaining tokens
-    if current_tokens:
-        text = ' '.join(current_tokens)
+    if current_part:
+        text_parts.append(' '.join(current_part))
+    
+    for i, text in enumerate(text_parts, 1):
         cursor.execute('''
             INSERT INTO bill_text (congress, bill_type, bill_number, tokenized_date, token_count, text_part, bill_text)
             VALUES (?, ?, ?, ?, ?, ?, ?)
-        ''', (congress, bill_type, bill_number, current_time, len(current_tokens), text_part, text))
+        ''', (congress, bill_type, bill_number, current_time, len(text.split()), i, text))
     
     conn.commit()
 
@@ -112,17 +101,11 @@ def process_xml_file(xml_path, db_path):
 
     conn = create_database(db_path)
 
-    tree = ET.parse(xml_path)
-    root = tree.getroot()
+    # Read the entire XML content as a string
+    with open(xml_path, 'r', encoding='utf-8') as file:
+        xml_content = file.read()
 
-    content_blocks = []
-    for elem in root.iter():
-        if elem.text and elem.text.strip():
-            content_blocks.append({'text': elem.text.strip(), 'closing_tag': f'</{elem.tag}>'})
-        if elem.tail and elem.tail.strip():
-            content_blocks.append({'text': elem.tail.strip(), 'closing_tag': None})
-
-    insert_tokens(conn, congress, bill_type, bill_number, content_blocks)
+    insert_tokens(conn, congress, bill_type, bill_number, xml_content)
 
     conn.close()
 
