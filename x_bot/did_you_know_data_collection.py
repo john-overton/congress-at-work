@@ -89,7 +89,8 @@ def create_tweet_table(conn):
                 tweet_text TEXT,
                 created_date DATETIME,
                 bill_index_count INTEGER,
-                tweeted INTEGER,
+                tweeted INTEGER DEFAULT 0,
+                tweeted_datetime DATETIME,
                 FOREIGN KEY (bill_index) REFERENCES didyouknow_bill_parameters (bill_index)
             )
         ''')
