@@ -20,7 +20,7 @@ Using AI tools, this bot distills complex legislation into useful, easily unders
 
 Current MVP features as of September 2024.
 
-1. **Data retrieval:** - [ ]
+- [ ] 1. **Data retrieval:**
    - Regularly fetch data from congress.gov API
    - Focus on recent bills, laws, and legislative updates
 
