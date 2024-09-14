@@ -1,4 +1,4 @@
-# Congress-at-Work Repository
+# Congress-at-work Repository
 
 ## Description
 
