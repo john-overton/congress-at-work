@@ -3,7 +3,7 @@ import sqlite3
 import re
 from datetime import datetime
 import nltk
-nltk.download('punkt', quiet=True)
+nltk.download('punkt_tab', quiet=True)
 from nltk.tokenize import word_tokenize
 from xml.etree import ElementTree as ET
 
@@ -12,8 +12,8 @@ token_max_size = 7000
 
 # Define the paths relative to the script's location
 script_dir = os.path.dirname(os.path.abspath(__file__))
-xml_folder = os.path.join(script_dir, 'bill_text.xml')
-db_folder = os.path.join(script_dir, 'bill_text.db')
+xml_folder = os.path.join(script_dir, 'bill_text_xml')
+db_folder = os.path.join(script_dir, 'bill_xml_db')
 
 def create_database(db_path):
     conn = sqlite3.connect(db_path)

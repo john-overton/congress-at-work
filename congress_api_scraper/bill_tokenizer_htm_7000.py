@@ -1,18 +1,19 @@
-# This pulls data from html files in bill_text.htm folder creates a unique DB per bill html file, and splits to content of the HTML file into token chunks based on the defined size.
-# This is useful for splitting up data into chunks that fit within the context window of certain LLM's
-# Target Model: https://replicate.com/meta/meta-llama-3-70b-instruct | Context window of 8000 tokens
-
 import os
 import sqlite3
 import re
-from bs4 import BeautifulSoup
 from datetime import datetime
 import nltk
-nltk.download('punkt_tab')
+nltk.download('punkt_tab', quiet=True)
 from nltk.tokenize import word_tokenize
+from bs4 import BeautifulSoup
 
 # constraints
 token_max_size = 7000
+
+# Define the paths relative to the script's location
+script_dir = os.path.dirname(os.path.abspath(__file__))
+htm_folder = os.path.join(script_dir, 'bill_text_htm')
+db_folder = os.path.join(script_dir, 'bill_text_db')
 
 def create_database(db_path):
     conn = sqlite3.connect(db_path)
@@ -48,29 +49,36 @@ def parse_filename(filename):
 def tokenize_text(text):
     return word_tokenize(text)
 
-def insert_tokens(conn, congress, bill_type, bill_number, tokens):
+def insert_tokens(conn, congress, bill_type, bill_number, content):
     cursor = conn.cursor()
     current_time = datetime.now().isoformat()
     
-    # Split tokens into chunks of 150,000 or fewer
-    chunk_size = token_max_size
-    for i in range(0, len(tokens), chunk_size):
-        chunk = tokens[i:i+chunk_size]
-        token_count = len(chunk)
-        text = ' '.join(chunk)
-        text_part = i // chunk_size + 1
-        
+    tokens = tokenize_text(content)
+    text_parts = []
+    current_part = []
+    
+    for token in tokens:
+        if len(current_part) + 1 > token_max_size:
+            text_parts.append(' '.join(current_part))
+            current_part = [token]
+        else:
+            current_part.append(token)
+    
+    if current_part:
+        text_parts.append(' '.join(current_part))
+    
+    for i, text in enumerate(text_parts, 1):
         cursor.execute('''
             INSERT INTO bill_text (congress, bill_type, bill_number, tokenized_date, token_count, text_part, bill_text)
             VALUES (?, ?, ?, ?, ?, ?, ?)
-        ''', (congress, bill_type, bill_number, current_time, token_count, text_part, text))
+        ''', (congress, bill_type, bill_number, current_time, len(text.split()), i, text))
     
     conn.commit()
 
-def process_html_file(html_path, db_path):
-    congress, bill_type, bill_number, last_action_date, file_gen_date = parse_filename(os.path.basename(html_path))
+def process_htm_file(htm_path, db_path):
+    congress, bill_type, bill_number, last_action_date, file_gen_date = parse_filename(os.path.basename(htm_path))
     if not all((congress, bill_type, bill_number, last_action_date, file_gen_date)):
-        print(f"Skipping {html_path}: Unable to parse filename")
+        print(f"Skipping {htm_path}: Unable to parse filename")
         return
 
     # Check if DB exists and compare dates
@@ -84,7 +92,7 @@ def process_html_file(html_path, db_path):
         if last_tokenized_date:
             last_tokenized_date = datetime.fromisoformat(last_tokenized_date)
             if last_tokenized_date >= file_gen_date:
-                print(f"Skipping {html_path}: DB is up to date")
+                print(f"Skipping {htm_path}: DB is up to date")
                 return
         
         # If DB exists but is outdated, delete it
@@ -93,32 +101,34 @@ def process_html_file(html_path, db_path):
 
     conn = create_database(db_path)
 
-    with open(html_path, 'r', encoding='utf-8') as file:
-        soup = BeautifulSoup(file, 'html.parser')
-        text = soup.get_text()
-        tokens = tokenize_text(text)
-        insert_tokens(conn, congress, bill_type, bill_number, tokens)
+    # Read the entire HTML content as a string
+    with open(htm_path, 'r', encoding='utf-8') as file:
+        html_content = file.read()
+    
+    # Extract text content from HTML
+    soup = BeautifulSoup(html_content, 'html.parser')
+    text_content = soup.get_text()
+
+    insert_tokens(conn, congress, bill_type, bill_number, text_content)
 
     conn.close()
 
 def main():
-    html_folder = 'bill_text.htm'
-    db_folder = 'bill_text.db'
-
     if not os.path.exists(db_folder):
         os.makedirs(db_folder)
+        print(f"Created database folder: {db_folder}")
 
-    for filename in os.listdir(html_folder):
+    for filename in os.listdir(htm_folder):
         if filename.endswith('.htm'):
-            html_path = os.path.join(html_folder, filename)
+            htm_path = os.path.join(htm_folder, filename)
             
             # Extract only the necessary parts for the DB filename
             congress, bill_type, bill_number, _, _ = parse_filename(filename)
             if all((congress, bill_type, bill_number)):
-                db_name = f"{congress}.{bill_type}.{bill_number}.db"
+                db_name = f"{congress}.{bill_type}.{bill_number}.htm.db"
                 db_path = os.path.join(db_folder, db_name)
-                process_html_file(html_path, db_path)
-                print(f"Processed {filename} -> {db_name}")
+                process_htm_file(htm_path, db_path)
+                print(f"Processed {filename} -> {db_path}")
             else:
                 print(f"Skipping {filename}: Unable to parse filename")
 
