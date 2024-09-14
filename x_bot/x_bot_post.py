@@ -3,11 +3,10 @@ import hashlib
 import json
 import os
 import requests
-from urllib.parse import urlencode
-import keys
-import x_bot.Gen_Random_Bill_Prompt as Gen_Random_Bill_Prompt
 import time
 import webbrowser
+from urllib.parse import urlencode
+import keys
 
 # X API endpoints
 TOKEN_URL = "https://api.x.com/2/oauth2/token"
@@ -36,11 +35,9 @@ def start_authorization(code_verifier, code_challenge):
     webbrowser.open(auth_url)
     print("Authorization started. Please check your browser.")
     
-    # Wait for the callback server to save the tokens
     while not os.path.exists(TOKEN_FILE):
         time.sleep(1)
     
-    # Give it a moment to finish writing
     time.sleep(2)
 
 def refresh_access_token(refresh_token):
@@ -77,9 +74,7 @@ def create_tweet(access_token, tweet_text):
 def get_valid_access_token():
     tokens = load_tokens()
     if tokens:
-        # Check if the access token has expired (2 hours by default)
         if tokens['expires_at'] <= time.time():
-            # Refresh the access token
             new_tokens = refresh_access_token(tokens['refresh_token'])
             new_tokens['expires_at'] = time.time() + new_tokens['expires_in']
             with open(TOKEN_FILE, 'w') as f:
@@ -89,29 +84,25 @@ def get_valid_access_token():
             return tokens['access_token']
     return None
 
-def main():
+def post_tweet(tweet_text):
     access_token = get_valid_access_token()
 
     if not access_token:
-        # If we don't have a valid access token, start the authorization process
         code_verifier = generate_code_verifier()
         code_challenge = generate_code_challenge(code_verifier)
 
         start_authorization(code_verifier, code_challenge)
         
-        # Load the tokens saved by the callback server
         tokens = load_tokens()
         if not tokens:
             raise Exception("Failed to obtain access token")
         
         access_token = tokens['access_token']
 
-    # Generate tweet text
-    tweet_text = Gen_Random_Bill_Prompt.RESULT[0]
-
-    # Create and post the tweet
     tweet_response = create_tweet(access_token, tweet_text)
     print(f"Tweet created successfully: {json.dumps(tweet_response, indent=2)}")
 
+# Example usage
 if __name__ == "__main__":
-    main()
+    sample_tweet = "This is a test tweet from the simplified OAuth 2.0 script!"
+    post_tweet(sample_tweet)
