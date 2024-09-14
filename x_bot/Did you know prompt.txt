@@ -1,0 +1,52 @@
+<Instructions>
+Create a python script to store "Did you know tweets" by sending HTM data to google gemini api.
+
+Anticipated packages:
+sqllite
+google-generativeai
+
+DB Schemas:
+didyouknow_bill_parameters.db
+	* bill_index - number (primary key)
+	* congress - number
+	* bill_type - text
+	* bill_number - number
+	* total_token_size - number
+	* total_expected_tweets - number
+
+didyouknow_tweet.db
+	* bill_index - number (foreign key)
+	* tweet_id - text (unique 8 character hex)
+	* tweet_text - text
+	* created_date - date\time
+	* bill_index_count - number
+
+Directory structure: 
+The python script created will exist in the folder "x_bot".  It will pull data from a folder called "congress_api_scrper\bill_text_htm".  There is also a folder called "keys".  Keys, x_bot, and congress_api_scaper are in the same root directory. Databases will be stored in ".\DB\".  Logs will be stored in ".\Logs\"
+
+File specifics: 
+Files in congress_api_scrper\bill_text_htm are labeled as {congress}.{bill_type}.{bill_number}.{last_action_date YYYY-MM-DD}.{creation_date YYYY-MM-DD-HHMM}.htm.  An example name is: "103.hjres.75.1993-12-03.2024-09-12-2017"
+
+API information: 
+Google API key is located in keys.py in variable gg_key
+
+Feature 1: didyouknow_bill_parameters database
+	For each file in folder:  congress_api_scrper\bill_text_htm
+		1. connect or create db (.\DB\didyouknow_bill_parameters.db)
+		2. Check to see if record for file exist in db if it does do not insert data.  If doesn't continue:
+		3. get token count of the file
+		4. Determine tweet amount based on token size: ratio should be 10 tweets to 1000 tokens
+		5. insert a database record in DB (.\DB\didyouknow_bill_parameters.db) with (congress, bill_type, bill_number, total_token_size, total_expected_tweets)
+	Ensure there is logging into folder into (.\Log\didyouknow_parameters.log)
+		
+Feature 2: didyouknow_tweet database
+	For each record in didyouknow_bill_parameters.db
+		1. connect or create db (.\DB\didyouknow_tweet.db)
+		2. also connect to (.\DB\didyouknow_bill_parameters.db)
+		3. Find total tweet number in didyouknow_tweet.db by bill_index and if equals to total_expected_tweets in didyouknow_bill_parameters.db move on to next record
+		4. call google gemini API with prompt that says:  "Generate a did you know tweet that pulls out interesting and unbiased fact(s) out of legislation text provided in html markup below.  Remember that the tweet must be 280 characters or less.  Include reference information so that someone could find the information if they chose to research it themselves.  The reference information should include bill type, bill number, and section within the bill the fact comes from. Create the tweet from any interesting section of this document: <contents of htm document>." and capture the response.  Ensure there is console logging and text logging of the API call to .\logs\didyouknow_tweet_call.log.  If the API fails to respond in 2 minutes, retry.  After 5 retries cancel the script.
+		5. insert a database record in DB didyouknow_tweet.db with the bill_index with (bill_index, tweet_id (which is generated and unique), tweet_text (which is the respons from the gemini API), created_date (todays date\time of record insert), bill_index_count (which is a tweet record count based on bill_index)
+		6. wait 1 second before restarting		
+</instructions>
+
+<References>Google API documentation is attached to use as reference</References>
