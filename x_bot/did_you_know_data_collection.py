@@ -89,6 +89,7 @@ def create_tweet_table(conn):
                 tweet_text TEXT,
                 created_date DATETIME,
                 bill_index_count INTEGER,
+                tweeted INTEGER,
                 FOREIGN KEY (bill_index) REFERENCES didyouknow_bill_parameters (bill_index)
             )
         ''')
@@ -211,7 +212,7 @@ def process_tweets():
         create_tweet_table(tweet_conn)
         
         cursor = bill_params_conn.cursor()
-        cursor.execute('SELECT * FROM didyouknow_bill_parameters')
+        cursor.execute('SELECT * FROM didyouknow_bill_parameters ORDER BY 1 DESC')
         bills = cursor.fetchall()
         
         for bill in bills:
@@ -240,7 +241,7 @@ def process_tweets():
                         else:
                             logging.error(f"Failed to insert tweet for bill index {bill_index}")
                     
-                    time.sleep(1)  # Wait 1 second before processing the next tweet
+                    time.sleep(60)  # Wait 1 second before processing the next tweet
                 else:
                     logging.error(f"No matching file found for bill {congress}.{bill_type}.{bill_number}")
             else:
