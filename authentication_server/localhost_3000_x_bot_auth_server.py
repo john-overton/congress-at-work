@@ -1,9 +1,17 @@
+import sys
+import os
 from flask import Flask, request, redirect, session
 import requests
 import json
 import time
-import keys
 import secrets
+
+# Add the rootdir to the Python path
+rootdir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.append(rootdir)
+
+# Now import keys from the correct location
+from keys import keys
 
 app = Flask(__name__)
 app.secret_key = secrets.token_hex(16)  # Set a secret key for session
@@ -13,8 +21,8 @@ AUTH_URL = "https://twitter.com/i/oauth2/authorize"
 TOKEN_URL = "https://api.x.com/2/oauth2/token"
 
 # Your app's credentials
-CLIENT_ID = keys.oauth2_client_id
-CLIENT_SECRET = keys.oauth2_client_secret
+CLIENT_ID = keys.caw_oauth2_client_id
+CLIENT_SECRET = keys.caw_oauth2_client_secret
 REDIRECT_URI = "http://127.0.0.1:3000/oauth/callback"
 
 # File to store tokens
