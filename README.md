@@ -18,7 +18,7 @@ Using AI tools, this bot distills complex legislation into useful, easily unders
 
 ## Congress.gov X Bot MVP Features - as of September, 2024
 
-- [ ] 1. **Data retrieval:**
+- [X] 1. **Data retrieval:**
    - Regularly fetch data from congress.gov API
    - Focus on recent bills, laws, and legislative updates
 
@@ -85,7 +85,7 @@ Using AI tools, this bot distills complex legislation into useful, easily unders
     - Updates on budget proposals and negotiations
     - Key spending allocations in appropriations bills
 
-- [ ] 9. **Explanations of Existing Laws**
+- [X] 9. **Explanations of Existing Laws**
     - "Did you know?" posts about current laws
     - Clarifications on commonly misunderstood legislation
 
