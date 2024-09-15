@@ -1,3 +1,8 @@
+# This is the engine script for posting @congressatwork.
+# This script selects a feature to post between the hours of 7 AM and 7PM at semi-random intervals.  
+# Modify the run_bot_list.py SCRIPT_LIST to add or remove features from the tweets that are posted.
+# This script can be left running while you add or remove features.
+
 import os
 import random
 import time
@@ -10,12 +15,12 @@ import run_bot_list
 # Variables (you can adjust these as needed)
 SCRIPTS_DIRECTORY = Path("./x_bot")  # Current directory
 LOG_DIRECTORY = Path("./x_bot/Logs")
-LOG_FILE = os.path.join(LOG_DIRECTORY, "schedule_post.log")
+LOG_FILE = os.path.join(LOG_DIRECTORY, "run_bot_scheduled.log")
 SCRIPT_LIST = run_bot_list.SCRIPT_LIST
 MIN_INTERVAL = 3600  # Minimum interval between posts in seconds (1 hour)
 MAX_INTERVAL = 6600  # Maximum interval between posts in seconds (1 hours 50 minutes)
 ACTIVE_HOURS_START = 7  # Start of active hours (7 AM)
-ACTIVE_HOURS_END = 23  # End of active hours (6 PM)
+ACTIVE_HOURS_END = 19  # End of active hours (7 PM)
 
 # Set up logging
 if not os.path.exists(LOG_DIRECTORY):
