@@ -5,6 +5,9 @@ from datetime import datetime
 import logging
 import secrets
 import sys
+import nltk
+nltk.download('punkt_tab', quiet=True)
+from nltk.tokenize import word_tokenize
 
 # Get the current script's directory (x_bot folder)
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -135,10 +138,11 @@ def insert_tweet(conn, bill_index, tweet_text):
         return False
 
 def get_token_count(file_path):
-    # This is a placeholder function. In a real-world scenario, you'd use a proper tokenizer.
+    # Get token count of the file
     with open(file_path, 'r', encoding='utf-8') as file:
         content = file.read()
-    return len(content.split())
+    tokens = word_tokenize(content)
+    return len(tokens)
 
 def process_bill_files():
     bill_params_db = os.path.join(current_dir, 'DB', 'didyouknow_bill_parameters.db')
@@ -170,11 +174,11 @@ def process_bill_files():
                     file_path = os.path.join(bill_dir, filename)
                     total_token_size = get_token_count(file_path)
                     
-                    # New calculation for total_expected_tweets
-                    if total_token_size < 500:
+                    # Calculation for total_expected_tweets
+                    if total_token_size < 2000:
                         total_expected_tweets = 2
                     else:
-                        total_expected_tweets = total_token_size // 100
+                        total_expected_tweets = total_token_size // 1000
                     
                     insert_bill_parameters(conn, congress, bill_type, bill_number, total_token_size, total_expected_tweets)
                     logging.info(f"Processed file: {filename} - Tokens: {total_token_size}, Expected Tweets: {total_expected_tweets}")
@@ -189,7 +193,7 @@ def generate_tweet(bill_content, bill_type, bill_number):
     model = genai.GenerativeModel("gemini-1.5-flash")
     prompt = f"""Generate a did you know tweet that pulls out interesting and unbiased fact(s) out of legislation text provided in html markup below. 
     Remember that the tweet must be 280 characters or less. Include reference information so that someone could find the information if they chose to research it themselves. 
-    The reference information should include bill type, bill number, and section within the bill the fact comes from. The tweet does not have to start with "Did you know".  All hashtags must contain "_" and not "." or "-" for example "#PL118_78 #AntiCorruptionLaw #ForeignExtortionPreventionAct" and not "#PL118.78 #Anti-Corruption-Law".
+    The reference information should include bill type, bill number, and section within the bill the fact comes from. The tweet should start with "Did you know" 50% of the time.  All hashtags must contain "_" and not "." or "-" for example "#PL118_78 #AntiCorruptionLaw #ForeignExtortionPreventionAct" and not "#PL118.78 #Anti-Corruption-Law".
     Create the tweet from any interesting section of this document: {bill_content}"""
     
     for _ in range(5):  # Retry up to 5 times
@@ -243,7 +247,7 @@ def process_tweets():
                         else:
                             logging.error(f"Failed to insert tweet for bill index {bill_index}")
                     
-                    time.sleep(60)  # Wait 1 second before processing the next tweet
+                    time.sleep(120)  # Wait 2 minutes before processing the next tweet
                 else:
                     logging.error(f"No matching file found for bill {congress}.{bill_type}.{bill_number}")
             else:
