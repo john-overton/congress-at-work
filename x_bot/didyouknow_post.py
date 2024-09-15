@@ -5,14 +5,14 @@ import x_bot_post
 from datetime import datetime
 
 # Set up logging
-log_dir = Path("./Logs")
+log_dir = Path("./x_bot/Logs")
 log_dir.mkdir(exist_ok=True)
 log_file = log_dir / "immediate_didyouknow_post.log"
 logging.basicConfig(filename=log_file, level=logging.INFO,
                     format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Database file path
-DB_FILE = Path("./DB/didyouknow_tweet.db")
+DB_FILE = Path("./x_bot/DB/didyouknow_tweet.db")
 
 def get_random_tweet():
     logging.info("Attempting to fetch a random tweet from the database")
@@ -26,7 +26,7 @@ def get_random_tweet():
         cursor.execute("""
             SELECT tweet_id, tweet_text 
             FROM didyouknow_tweet 
-            WHERE tweeted = 0 
+            WHERE tweeted = 0 AND tweet_text_len <= 280
             ORDER BY RANDOM() 
             LIMIT 1
         """)
