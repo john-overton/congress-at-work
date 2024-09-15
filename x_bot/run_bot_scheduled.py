@@ -68,7 +68,7 @@ def main():
                     time.sleep(min(60, (next_run - datetime.now()).total_seconds()))
         else:
             logging.info("Outside of active hours. Waiting...")
-            time.sleep(3600)  # Sleep for an hour and check again
+            time.sleep(1800)  # Sleep for 30 minutes and check again
 
 if __name__ == "__main__":
     main()
