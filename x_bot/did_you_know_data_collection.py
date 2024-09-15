@@ -87,6 +87,7 @@ def create_tweet_table(conn):
                 bill_index INTEGER,
                 tweet_id TEXT UNIQUE,
                 tweet_text TEXT,
+                tweet_text_len INTEGER,
                 created_date DATETIME,
                 bill_index_count INTEGER,
                 tweeted INTEGER DEFAULT 0,
@@ -124,9 +125,9 @@ def insert_tweet(conn, bill_index, tweet_text):
         
         cursor.execute('''
             INSERT INTO didyouknow_tweet 
-            (bill_index, tweet_id, tweet_text, created_date, bill_index_count)
-            VALUES (?, ?, ?, ?, ?)
-        ''', (bill_index, tweet_id, tweet_text, created_date, bill_index_count))
+            (bill_index, tweet_id, tweet_text, tweet_text_len, created_date, bill_index_count)
+            VALUES (?, ?, ?, ?, ?, ?)
+        ''', (bill_index, tweet_id, tweet_text, len(tweet_text), created_date, bill_index_count))
         conn.commit()
         return True
     except sqlite3.Error as e:
@@ -188,7 +189,7 @@ def generate_tweet(bill_content, bill_type, bill_number):
     model = genai.GenerativeModel("gemini-1.5-flash")
     prompt = f"""Generate a did you know tweet that pulls out interesting and unbiased fact(s) out of legislation text provided in html markup below. 
     Remember that the tweet must be 280 characters or less. Include reference information so that someone could find the information if they chose to research it themselves. 
-    The reference information should include bill type, bill number, and section within the bill the fact comes from. 
+    The reference information should include bill type, bill number, and section within the bill the fact comes from. The tweet does not have to start with "Did you know".  All hashtags must contain "_" and not "." or "-" for example "#PL118_78 #AntiCorruptionLaw #ForeignExtortionPreventionAct" and not "#PL118.78 #Anti-Corruption-Law".
     Create the tweet from any interesting section of this document: {bill_content}"""
     
     for _ in range(5):  # Retry up to 5 times
