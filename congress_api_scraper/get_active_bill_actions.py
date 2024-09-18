@@ -73,30 +73,48 @@ def fetch_bill_actions(congress, bill_type, bill_number):
     response.raise_for_status()
     return response.json()["actions"]
 
+def action_exists(cursor, congress, bill_type, bill_number, action_code, action_date):
+    cursor.execute('''
+    SELECT 1 FROM bill_actions
+    WHERE congress = ? AND billType = ? AND billNumber = ? AND actionCode = ? AND actionDate = ?
+    ''', (congress, bill_type, bill_number, action_code, action_date))
+    return cursor.fetchone() is not None
+
 def insert_actions(actions, congress, bill_type, bill_number):
     conn = sqlite3.connect(ACTIVE_BILLS_DB)
     cursor = conn.cursor()
 
+    inserted_count = 0
+    skipped_count = 0
+
     for action in actions:
-        try:
-            cursor.execute('''
-            INSERT OR IGNORE INTO bill_actions (
-                congress, billType, billNumber, actionCode, actionDate, actionText, actionType
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)
-            ''', (
-                congress,
-                bill_type,
-                bill_number,
-                action.get("actionCode", ""),
-                action["actionDate"],
-                action["text"],
-                action["type"]
-            ))
-        except sqlite3.IntegrityError:
-            logging.info(f"Skipping duplicate record: {congress}, {bill_type}, {bill_number}, {action.get('actionCode', '')}, {action['actionDate']}")
+        action_code = action.get("actionCode", "")
+        action_date = action["actionDate"]
+
+        if not action_exists(cursor, congress, bill_type, bill_number, action_code, action_date):
+            try:
+                cursor.execute('''
+                INSERT INTO bill_actions (
+                    congress, billType, billNumber, actionCode, actionDate, actionText, actionType
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                ''', (
+                    congress,
+                    bill_type,
+                    bill_number,
+                    action_code,
+                    action_date,
+                    action["text"],
+                    action["type"]
+                ))
+                inserted_count += 1
+            except sqlite3.IntegrityError:
+                logging.warning(f"Integrity error inserting record: {congress}, {bill_type}, {bill_number}, {action_code}, {action_date}")
+        else:
+            skipped_count += 1
 
     conn.commit()
     conn.close()
+    logging.info(f"Inserted {inserted_count} new actions and skipped {skipped_count} existing actions for {congress} {bill_type}-{bill_number}")
 
 def main():
     logging.info("Starting bill actions update process")
