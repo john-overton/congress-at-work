@@ -1,6 +1,4 @@
 run_list = [
-        "get_bills.py",
-        "get_congress_list.py",
         "get_laws_list.py",
         "get_law_text_urls.py",
         "add_update_bill_text.py",

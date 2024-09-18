@@ -18,7 +18,7 @@ API_BASE_URL = "https://api.congress.gov/v3/bill"
 API_KEY = keys.Key_1
 
 # Database configuration
-DB_NAME = os.path.join(os.getcwd(), "congress_bills.db")
+DB_NAME = os.path.join(os.getcwd(),"congress_api_scraper", "recent_bill_updates.db")
 
 def create_database():
     conn = sqlite3.connect(DB_NAME)
@@ -105,7 +105,7 @@ def main():
     offset = 0 
     limit = 100 
 
-    while total_bills < 100:
+    while total_bills >= 0:
         try:
             bills = fetch_bills(offset, limit) 
             if not bills:

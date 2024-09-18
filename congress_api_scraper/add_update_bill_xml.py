@@ -14,15 +14,14 @@ import sys
 DELAY_BETWEEN_CALLS = 1  # 1 second delay between API calls
 RETRY_DELAY = 60  # 60 second retry delay on connection error
 
-# Set up logging
-logging.basicConfig(level=logging.DEBUG, 
-                    format='%(asctime)s - %(levelname)s - %(message)s',
-                    handlers=[logging.FileHandler("bill_scraper.log"), 
-                              logging.StreamHandler()])
+# Configure Loggins
+log_file = os.path.join(os.getcwd(), "congress_api_scraper", "Logs", "add_update_bill_xml.log")
+logging.basicConfig(filename=log_file, level=logging.INFO,
+                    format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Database and folder configuration
-DB_NAME = "bill_url_list.db"
-OUTPUT_FOLDER = "bill_text.xml"
+DB_NAME = os.path.join(os.getcwd(), "congress_api_scraper", "sys_db", "bill_url_list.db")
+OUTPUT_FOLDER = "bill_text_xml"
 
 # Get the directory of the script
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))

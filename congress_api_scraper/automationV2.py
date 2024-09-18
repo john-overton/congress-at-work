@@ -10,7 +10,7 @@ import automation_run_list
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(levelname)s - %(message)s',
                     handlers=[
-                        logging.FileHandler("script_runner.log"),
+                        logging.FileHandler(r".\congress_api_scraper\Logs\bill_text_crawlers.log"),
                         logging.StreamHandler()
                     ])
 

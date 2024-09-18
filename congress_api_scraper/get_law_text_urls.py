@@ -29,13 +29,14 @@ sys.path.append(os.path.dirname(keys_path))
 from keys import Key_1
 
 # Set up logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+log_file = os.path.join(script_dir, "Logs", "get_law_text_urls.log")
+logging.basicConfig(filename=log_file, level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Constants
 API_BASE_URL = "https://api.congress.gov/v3/bill"
 API_KEY = Key_1
-SOURCE_DB = os.path.join(script_dir, "laws.db")
-TARGET_DB = os.path.join(script_dir, "bill_url_list.db")
+SOURCE_DB = os.path.join(script_dir, "sys_db", "laws.db")
+TARGET_DB = os.path.join(script_dir, "sys_db", "bill_url_list.db")
 TARGET_TABLE = "bill_urls"
 DELAY_BETWEEN_CALLS = 1  # 1 second delay between API calls
 RETRY_DELAY = 60  # 60 second retry delay on connection error
@@ -72,6 +73,8 @@ def fetch_bill_data(congress, bill_type, bill_number):
     try:
         response = requests.get(url, params=params)
         response.raise_for_status()
+        if response.status_code == 200:
+            logging.info(f"API call {url} status: {response}, successful!")
         return response.json()
     except requests.RequestException as e:
         logging.error(f"API request failed: {e}")

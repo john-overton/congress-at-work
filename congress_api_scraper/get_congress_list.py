@@ -20,7 +20,7 @@ FORMAT = "json"
 LIMIT = 250
 
 # Database configuration
-DB_NAME = os.path.join(os.getcwd(), "congress.db")
+DB_NAME = os.path.join(os.getcwd(),"congress_api_scraper", "sys_db", "congress.db")
 TABLE_NAME = "congress_list"
 
 def create_database():

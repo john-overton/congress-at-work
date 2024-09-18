@@ -6,7 +6,6 @@ import sqlite3
 import time
 from typing import List, Dict, Any
 import logging
-import json
 from collections import deque
 import sys
 import os
@@ -16,17 +15,19 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'keys'))
 
 import keys
 
-# Set up logging
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+# Configure Loggins
+log_file = os.path.join(os.getcwd(), "congress_api_scraper", "Logs", "get_law_list.log")
+logging.basicConfig(filename=log_file, level=logging.INFO,
+                    format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Constants
 API_KEY = keys.Key_1
 BASE_URL = "https://api.congress.gov/v3/law"
 LIMIT = 250  # Maximum allowed by the API
-CONGRESS_DB = "congress.db"
+CONGRESS_DB = os.path.join(os.getcwd(),"congress_api_scraper", "sys_db", "congress.db")
 
 # Database configuration
-DB_NAME = os.path.join(os.getcwd(), "laws.db")
+DB_NAME = os.path.join(os.getcwd(),"congress_api_scraper", "sys_db", "laws.db")
 TABLE_NAME = "law_list"
 
 # Trailing log setup
@@ -44,8 +45,8 @@ def log_api_call(url: str, params: Dict[str, Any], response: requests.Response):
         api_log.append(log_entry)
         
         # Write the current state of the api_log to a file
-        with open('api_log.json', 'w') as f:
-            json.dump(list(api_log), f, indent=2)
+        if response.status_code == 200:
+            logging.info(f"API call {url} status: {response}, successful!")
     except Exception as e:
         logging.error(f"Error in log_api_call: {str(e)}")
 
