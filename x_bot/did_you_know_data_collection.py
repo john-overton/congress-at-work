@@ -191,15 +191,26 @@ def process_bill_files():
 
 def generate_tweet(bill_content, bill_type, bill_number):
     model = genai.GenerativeModel("gemini-1.5-flash")
-    prompt = f"""Generate a did you know tweet that pulls out interesting and unbiased fact(s) out of legislation text provided in html markup below. 
+    prompt1 = f"""Generate a did you know tweet that pulls out interesting and unbiased fact(s) out of legislation text provided in html markup below. 
     Remember that the tweet must be 280 characters or less. Include reference information so that someone could find the information if they chose to research it themselves. 
-    The reference information should include bill type, bill number, and section within the bill the fact comes from. The tweet should start with "Did you know" 50% of the time.  All hashtags must contain "_" and not "." or "-" for example "#PL118_78 #AntiCorruptionLaw #ForeignExtortionPreventionAct" and not "#PL118.78 #Anti-Corruption-Law".
+    The reference information should include bill type, bill number, and section within the bill the fact comes from. The tweet should start with "Did you know".  All hashtags must contain "_" and not "." or "-" for example "#PL118_78 #AntiCorruptionLaw #ForeignExtortionPreventionAct" and not "#PL118.78 #Anti-Corruption-Law".
+    Create the tweet from any interesting section of this document: {bill_content}"""
+    prompt2 = f"""Generate a did you know tweet that pulls out interesting and unbiased fact(s) out of legislation text provided in html markup below. 
+    Remember that the tweet must be 280 characters or less. Include reference information so that someone could find the information if they chose to research it themselves. 
+    The reference information should include bill type, bill number, and section within the bill the fact comes from. The tweet should not start with "Did you know".  All hashtags must contain "_" and not "." or "-" for example "#PL118_78 #AntiCorruptionLaw #ForeignExtortionPreventionAct" and not "#PL118.78 #Anti-Corruption-Law".
     Create the tweet from any interesting section of this document: {bill_content}"""
     
     for _ in range(5):  # Retry up to 5 times
+        cycle = 0
         try:
-            response = model.generate_content(prompt)
-            return response.text
+            if cycle < 1:
+                response = model.generate_content(prompt1)
+                cycle += 1
+                return response.text
+            else:
+                response = model.generate_content(prompt2)
+                cycle -= 1
+                return response.text
         except Exception as e:
             logging.error(f"API call failed: {e}. Retrying...")
             time.sleep(5)  # Wait for 5 seconds before retrying
