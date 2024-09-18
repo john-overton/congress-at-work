@@ -8,6 +8,7 @@ import sys
 import nltk
 nltk.download('punkt_tab', quiet=True)
 from nltk.tokenize import word_tokenize
+from functools import lru_cache
 
 # Get the current script's directory (x_bot folder)
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -191,30 +192,32 @@ def process_bill_files():
 
 def generate_tweet(bill_content, bill_type, bill_number):
     model = genai.GenerativeModel("gemini-1.5-flash")
-    prompt1 = f"""Generate a did you know tweet that pulls out interesting and unbiased fact(s) out of legislation text provided in html markup below. 
-    Remember that the tweet must be 280 characters or less. Include reference information so that someone could find the information if they chose to research it themselves. 
+    prompt1 = f"""Generate a did you know tweet that pulls out interesting and unbiased fact(s) out of legislation text provided in html markup below.
+    Remember that the tweet must be 280 characters or less. Include reference information so that someone could find the information if they chose to research it themselves.
     The reference information should include bill type, bill number, and section within the bill the fact comes from. The tweet should start with "Did you know".  All hashtags must contain "_" and not "." or "-" for example "#PL118_78 #AntiCorruptionLaw #ForeignExtortionPreventionAct" and not "#PL118.78 #Anti-Corruption-Law".
     Create the tweet from any interesting section of this document: {bill_content}"""
-    prompt2 = f"""Generate a did you know tweet that pulls out interesting and unbiased fact(s) out of legislation text provided in html markup below. 
-    Remember that the tweet must be 280 characters or less. Include reference information so that someone could find the information if they chose to research it themselves. 
-    The reference information should include bill type, bill number, and section within the bill the fact comes from. The tweet should not start with "Did you know".  All hashtags must contain "_" and not "." or "-" for example "#PL118_78 #AntiCorruptionLaw #ForeignExtortionPreventionAct" and not "#PL118.78 #Anti-Corruption-Law".
+    prompt2 = f"""Generate a tweet that pulls out interesting and unbiased fact(s) out of legislation text provided in html markup below.
+    Remember that the tweet must be 280 characters or less. Include reference information so that someone could find the information if they chose to research it themselves.
+    The reference information should include bill type, bill number, and section within the bill the fact comes from. All hashtags must contain "_" and not "." or "-" for example "#PL118_78 #AntiCorruptionLaw #ForeignExtortionPreventionAct" and not "#PL118.78 #Anti-Corruption-Law".
     Create the tweet from any interesting section of this document: {bill_content}"""
-    
+
+    # Use a class attribute to maintain state between function calls
+    if not hasattr(generate_tweet, 'cycle'):
+        generate_tweet.cycle = 0
+
+    prompt = prompt1 if generate_tweet.cycle == 0 else prompt2
+
     for _ in range(5):  # Retry up to 5 times
-        cycle = 0
         try:
-            if cycle < 1:
-                response = model.generate_content(prompt1)
-                cycle += 1
-                return response.text
-            else:
-                response = model.generate_content(prompt2)
-                cycle -= 1
-                return response.text
+            logging.info(f"The cycle variable = {generate_tweet.cycle} and we will try prompt{generate_tweet.cycle + 1}")
+            response = model.generate_content(prompt)
+            # Toggle the cycle between 0 and 1
+            generate_tweet.cycle = 1 - generate_tweet.cycle
+            return response.text
         except Exception as e:
             logging.error(f"API call failed: {e}. Retrying...")
             time.sleep(5)  # Wait for 5 seconds before retrying
-    
+
     logging.error("Failed to generate tweet after 5 retries.")
     return None
 
