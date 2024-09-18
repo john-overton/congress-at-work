@@ -4,9 +4,10 @@
 import requests
 import sqlite3
 from datetime import datetime, timedelta
-import time
 import sys
+import time
 import os
+import logging
 
 # Add the adjacent 'keys' folder to the Python path
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'keys'))
@@ -18,13 +19,25 @@ API_BASE_URL = "https://api.congress.gov/v3/bill"
 API_KEY = keys.Key_1
 
 # Database configuration
-DB_NAME = os.path.join(os.getcwd(),"congress_api_scraper", "recent_bill_updates.db")
+DB_NAME = os.path.join(os.getcwd(), "congress_api_scraper", "sys_db", "recent_bill_updates.db")
+
+# Logging configuration
+LOG_DIR = os.path.join(os.getcwd(), "congress_api_scraper", "Logs")
+os.makedirs(LOG_DIR, exist_ok=True)
+LOG_FILE = os.path.join(LOG_DIR, "get_bill_updates.log")
+
+logging.basicConfig(filename=LOG_FILE, level=logging.INFO,
+                    format='%(asctime)s - %(levelname)s - %(message)s')
 
 def create_database():
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
+    
+    # Drop the table if it exists
+    cursor.execute('DROP TABLE IF EXISTS bills')
+    
     cursor.execute('''
-    CREATE TABLE IF NOT EXISTS bills (
+    CREATE TABLE bills (
         congress INTEGER,
         number TEXT,
         type TEXT,
@@ -39,17 +52,16 @@ def create_database():
     ''')
     conn.commit()
     conn.close()
+    logging.info("Database created/reset successfully")
 
-# Fetch bills from congress.gov API and store as JSON
-
-def fetch_bills(offset=0, limit=100):
+def fetch_bills(offset=0):
     end_date = datetime.utcnow()
-    start_date = end_date - timedelta(days=30)  # Fetch bills from the last 30 days
+    start_date = end_date - timedelta(days=30)
 
     params = {
         "format": "json",
         "offset": offset,
-        "limit": limit,
+        "limit": 250,  # Maximum allowed by the API
         "fromDateTime": start_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
         "toDateTime": end_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
         "sort": "updateDate+desc",
@@ -57,10 +69,9 @@ def fetch_bills(offset=0, limit=100):
     }
 
     response = requests.get(API_BASE_URL, params=params)
+    logging.info(f"API call {requests.get(API_BASE_URL, params=params)} successfull.")
     response.raise_for_status()
     return response.json()["bills"]
-
-# Function to insert bills into database
 
 def insert_bills(bills):
     conn = sqlite3.connect(DB_NAME)
@@ -68,7 +79,7 @@ def insert_bills(bills):
 
     for bill in bills:
         cursor.execute('''
-        INSERT OR REPLACE INTO bills (
+        INSERT INTO bills (
             congress, number, type, title, originChamber, originChamberCode,
             latestActionDate, latestActionText, updateDate, url
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -88,45 +99,54 @@ def insert_bills(bills):
     conn.commit()
     conn.close()
 
-def bills_count():
+def check_data_age():
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
+    
+    thirty_days_ago = (datetime.utcnow() - timedelta(days=30)).strftime("%Y-%m-%d")
+    
     cursor.execute('''
-                   Select number from bills
-                   ''')
-    qresults = cursor.fetchall()
-    return len(qresults)
-
-# Main function that performs all subfunctions
+    SELECT COUNT(*) FROM bills
+    WHERE latestActionDate < ?
+    ''', (thirty_days_ago,))
+    
+    count = cursor.fetchone()[0]
+    conn.close()
+    
+    return count > 0
 
 def main():
-    create_database() 
-    total_bills = bills_count() 
-    offset = 0 
-    limit = 100 
+    logging.info("Starting bill update process")
+    create_database()
+    total_bills = 0
+    offset = 0
 
-    while total_bills >= 0:
+    while True:
         try:
-            bills = fetch_bills(offset, limit) 
+            bills = fetch_bills(offset)
             if not bills:
                 break
 
-            insert_bills(bills) 
+            insert_bills(bills)
             total_bills += len(bills)
-            offset += limit
+            offset += len(bills)
 
-            print(f"Fetched and inserted {len(bills)} bills. Total: {total_bills}") 
+            logging.info(f"Fetched and inserted {len(bills)} bills. Total: {total_bills}")
 
-            if len(bills) < limit:
+            if check_data_age():
+                logging.info("Detected data older than 30 days. Stopping the process.")
+                break
+
+            if len(bills) < 250:  # If we get less than the maximum, we've reached the end
                 break
 
             time.sleep(1)  # Add a delay to avoid hitting rate limits
 
         except requests.exceptions.RequestException as e:
-            print(f"Error fetching data: {e}")
+            logging.error(f"Error fetching data: {e}")
             break
 
-    print(f"Completed. Total bills fetched and stored: {total_bills}")
+    logging.info(f"Completed. Total bills fetched and stored: {total_bills}")
 
 if __name__ == "__main__":
     main()
