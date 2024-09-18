@@ -1,5 +1,5 @@
-#This pulls bills from the bills API located here: https://gpo.congress.gov/#/bill/bill_list_all and places data into the congress_bills.db
-#This is version 1.2
+#This pulls bills from the bills API located here: https://gpo.congress.gov/#/bill/bill_list_all and places data into the active_bill_data.db
+#This is version 2.0
 
 import requests
 import sqlite3
@@ -19,12 +19,13 @@ API_BASE_URL = "https://api.congress.gov/v3/bill"
 API_KEY = keys.Key_1
 
 # Database configuration
-DB_NAME = os.path.join(os.getcwd(), "congress_api_scraper", "sys_db", "recent_bill_updates.db")
+DB_NAME = os.path.join(os.getcwd(), "congress_api_scraper", "sys_db", "active_bill_data.db")
+CONGRESS_DB = os.path.join(os.getcwd(), "congress_api_scraper", "sys_db", "congress.db")
 
 # Logging configuration
 LOG_DIR = os.path.join(os.getcwd(), "congress_api_scraper", "Logs")
 os.makedirs(LOG_DIR, exist_ok=True)
-LOG_FILE = os.path.join(LOG_DIR, "get_bill_updates.log")
+LOG_FILE = os.path.join(LOG_DIR, "get_active_bills.log")
 
 logging.basicConfig(filename=LOG_FILE, level=logging.INFO,
                     format='%(asctime)s - %(levelname)s - %(message)s')
@@ -34,13 +35,13 @@ def create_database():
     cursor = conn.cursor()
     
     # Drop the table if it exists
-    cursor.execute('DROP TABLE IF EXISTS bills')
+    cursor.execute('DROP TABLE IF EXISTS active_bill_list')
     
     cursor.execute('''
-    CREATE TABLE bills (
+    CREATE TABLE active_bill_list (
         congress INTEGER,
-        number TEXT,
-        type TEXT,
+        billNumber TEXT,
+        billType TEXT,
         title TEXT,
         originChamber TEXT,
         originChamberCode TEXT,
@@ -54,22 +55,39 @@ def create_database():
     conn.close()
     logging.info("Database created/reset successfully")
 
-def fetch_bills(offset=0):
-    end_date = datetime.utcnow()
-    start_date = end_date - timedelta(days=30)
+def get_active_congress_and_start_date():
+    conn = sqlite3.connect(CONGRESS_DB)
+    cursor = conn.cursor()
+    
+    today = datetime.now().strftime("%Y-%m-%d")
+    
+    cursor.execute('''
+    SELECT DISTINCT congress_number, session_start_date
+    FROM congress_list
+    WHERE session_start_date < ? AND session_end_date IS NULL
+    ''', (today,))
+    
+    result = cursor.fetchone()
+    conn.close()
+    
+    if result:
+        return result[0], result[1]
+    else:
+        logging.error("No active congress found")
+        sys.exit(1)
 
+def fetch_bills(congress, offset=0):
     params = {
         "format": "json",
         "offset": offset,
         "limit": 250,  # Maximum allowed by the API
-        "fromDateTime": start_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "toDateTime": end_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
         "sort": "updateDate+desc",
         "api_key": API_KEY
     }
 
-    response = requests.get(API_BASE_URL, params=params)
-    logging.info(f"API call {requests.get(API_BASE_URL, params=params)} successfull.")
+    url = f"{API_BASE_URL}/{congress}"
+    response = requests.get(url, params=params)
+    logging.info(f"API call {requests.get(url, params=params)} successful.")
     response.raise_for_status()
     return response.json()["bills"]
 
@@ -79,8 +97,8 @@ def insert_bills(bills):
 
     for bill in bills:
         cursor.execute('''
-        INSERT INTO bills (
-            congress, number, type, title, originChamber, originChamberCode,
+        INSERT INTO active_bill_list (
+            congress, billNumber, billType, title, originChamber, originChamberCode,
             latestActionDate, latestActionText, updateDate, url
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
@@ -99,32 +117,26 @@ def insert_bills(bills):
     conn.commit()
     conn.close()
 
-def check_data_age():
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    
-    thirty_days_ago = (datetime.utcnow() - timedelta(days=30)).strftime("%Y-%m-%d")
-    
-    cursor.execute('''
-    SELECT COUNT(*) FROM bills
-    WHERE latestActionDate < ?
-    ''', (thirty_days_ago,))
-    
-    count = cursor.fetchone()[0]
-    conn.close()
-    
-    return count > 0
-
 def main():
     logging.info("Starting bill update process")
     create_database()
     total_bills = 0
     offset = 0
+    active_congress, session_start_date = get_active_congress_and_start_date()
+    logging.info(f"Active Congress: {active_congress}, Session Start Date: {session_start_date}")
+
+    session_start_datetime = datetime.strptime(session_start_date, "%Y-%m-%d")
 
     while True:
         try:
-            bills = fetch_bills(offset)
+            bills = fetch_bills(active_congress, offset)
             if not bills:
+                break
+
+            # Check if the oldest bill in this batch is older than the session start date
+            oldest_bill_date = datetime.strptime(bills[-1]["updateDate"], "%Y-%m-%d").replace(tzinfo=None)
+            if oldest_bill_date < session_start_datetime:
+                logging.info("Reached bills older than the session start date. Stopping the process.")
                 break
 
             insert_bills(bills)
@@ -132,10 +144,6 @@ def main():
             offset += len(bills)
 
             logging.info(f"Fetched and inserted {len(bills)} bills. Total: {total_bills}")
-
-            if check_data_age():
-                logging.info("Detected data older than 30 days. Stopping the process.")
-                break
 
             if len(bills) < 250:  # If we get less than the maximum, we've reached the end
                 break

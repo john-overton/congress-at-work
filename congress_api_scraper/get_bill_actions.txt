@@ -1,0 +1,28 @@
+I need to create a new python script to get data from the https://api.congress.gov/v3/bill/118/s/4445/actions?api_key=[API KEY] enpoint.
+
+It has several variables:
+congress (path) (required) - integer: The congress number. For example, the value can be 117.
+billType (path) (required) - string: The type of bill. Value can be hr, s, hjres, sjres, hconres, sconres, hres, or sres.
+billNumber (path) (required) - integer: The bill’s assigned number. For example, the value can be 3076.
+format (query) (optional) - string: The data format. Value can be xml or json.
+offset (query) (optional) - integer: The starting record returned. 0 is the first record.
+limit (query) (optional) - integer: The number of records returned. The maximum limit is 250.
+
+This script will know which records to pulling a list pulling congress, billType, billNumber from the active_bill_list table within the active_bills.db file ordered by congress descending.
+
+The response from the API should be placed into a sql DB named Bill_Data.DB in a table called Bill_Actions.  
+The table should have the following structure:
+	congress - integer,
+	billType - text,
+	billNumber - integer,
+	actionCode - text,
+	actionDate - date,
+	actionText - text, <- comes from "text" in json response
+	actionType - text, <- comes from "type" in json required
+	
+The script should check to see if the record already exists in the database by matching up the congress, billType, billNumber, actionCode, and actionDate.  If the reacord is already in the DB, skip to next record in the response.
+
+This script should include action logging into the get_bill_actions.log within the Logs folder.
+
+A sample response from the API is attached.
+A smple script from the same folder is also attached so you can reference file\folder locations for keys, db's and logs.

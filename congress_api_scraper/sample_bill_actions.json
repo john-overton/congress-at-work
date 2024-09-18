@@ -1,0 +1,24 @@
+{
+    "actions": [
+        {
+            "actionCode": "36000",
+            "actionDate": "2022-04-06",
+            "sourceSystem": {
+                "code": 9,
+                "name": "Library of Congress"
+            },
+            "text": "Became Public Law No: 117-108.",
+            "type": "BecameLaw"
+        },
+        {
+            "actionCode": "E30000",
+            "actionDate": "2022-04-06",
+            "sourceSystem": {
+                "code": 9,
+                "name": "Library of Congress"
+            },
+            "text": "Signed by President.",
+            "type": "President"
+        },
+    ],
+}
