@@ -16,7 +16,6 @@ API_BASE_URL = "https://api.congress.gov/v3/bill"
 API_KEY = keys.Key_1
 
 # Database configuration
-# DB_NAME = os.path.join(os.getcwd(), "congress_api_scraper", "sys_db", "Bill_Data.db")
 ACTIVE_BILLS_DB = os.path.join(os.getcwd(), "congress_api_scraper", "sys_db", "active_bill_data.db")
 
 # Logging configuration
@@ -71,7 +70,7 @@ def fetch_bill_actions(congress, bill_type, bill_number):
     response = requests.get(url, params=params)
     logging.info(f"API call to {url} successful.")
     response.raise_for_status()
-    return response.json()["actions"]
+    return response.json().get("actions", [])
 
 def action_exists(cursor, congress, bill_type, bill_number, action_code, action_date):
     cursor.execute('''
@@ -86,10 +85,18 @@ def insert_actions(actions, congress, bill_type, bill_number):
 
     inserted_count = 0
     skipped_count = 0
+    error_count = 0
 
     for action in actions:
         action_code = action.get("actionCode", "")
-        action_date = action["actionDate"]
+        action_date = action.get("actionDate", "")
+        action_text = action.get("text", "")
+        action_type = action.get("type", "")
+
+        if not action_date:
+            logging.warning(f"Skipping action with missing date for {congress} {bill_type}-{bill_number}")
+            error_count += 1
+            continue
 
         if not action_exists(cursor, congress, bill_type, bill_number, action_code, action_date):
             try:
@@ -103,18 +110,19 @@ def insert_actions(actions, congress, bill_type, bill_number):
                     bill_number,
                     action_code,
                     action_date,
-                    action["text"],
-                    action["type"]
+                    action_text,
+                    action_type
                 ))
                 inserted_count += 1
             except sqlite3.IntegrityError:
                 logging.warning(f"Integrity error inserting record: {congress}, {bill_type}, {bill_number}, {action_code}, {action_date}")
+                error_count += 1
         else:
             skipped_count += 1
 
     conn.commit()
     conn.close()
-    logging.info(f"Inserted {inserted_count} new actions and skipped {skipped_count} existing actions for {congress} {bill_type}-{bill_number}")
+    logging.info(f"Inserted {inserted_count} new actions, skipped {skipped_count} existing actions, and encountered {error_count} errors for {congress} {bill_type}-{bill_number}")
 
 def main():
     logging.info("Starting bill actions update process")
@@ -129,6 +137,8 @@ def main():
             time.sleep(1)  # Add a delay to avoid hitting rate limits
         except requests.exceptions.RequestException as e:
             logging.error(f"Error fetching data for {congress} {bill_type}-{bill_number}: {e}")
+        except Exception as e:
+            logging.error(f"Unexpected error processing {congress} {bill_type}-{bill_number}: {e}")
 
     logging.info("Completed bill actions update process")
 
