@@ -1,5 +1,5 @@
-#This pulls bills from the bills API located here: https://gpo.congress.gov/#/bill/bill_list_all and places data into the active_bill_data.db
-#This is version 2.0
+# This script will create the DB active_bills_data.db and pull all activities for the current congressional period.
+# EACH TIME THIS SCRIPT RUNS IT WILL TUNCATE THE ACTIVE_BILLS TABLE AND RECREATE THE WHOLE THING
 
 import requests
 import sqlite3
@@ -25,7 +25,7 @@ CONGRESS_DB = os.path.join(os.getcwd(), "congress_api_scraper", "sys_db", "congr
 # Logging configuration
 LOG_DIR = os.path.join(os.getcwd(), "congress_api_scraper", "Logs")
 os.makedirs(LOG_DIR, exist_ok=True)
-LOG_FILE = os.path.join(LOG_DIR, "get_active_bills.log")
+LOG_FILE = os.path.join(LOG_DIR, "get_base_active_bills.log")
 
 logging.basicConfig(filename=LOG_FILE, level=logging.INFO,
                     format='%(asctime)s - %(levelname)s - %(message)s')
@@ -48,7 +48,10 @@ def create_database():
         latestActionDate TEXT,
         latestActionText TEXT,
         updateDate TEXT,
-        url TEXT
+        url TEXT,
+        actions_updated INTEGER DEFAULT 0,
+        insert_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+        importance TEXT
     )
     ''')
     conn.commit()
@@ -91,16 +94,47 @@ def fetch_bills(congress, offset=0):
     response.raise_for_status()
     return response.json()["bills"]
 
-def insert_bills(bills):
+def insert_or_update_bills(bills):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
 
     for bill in bills:
+        # Check if the bill already exists
+        cursor.execute('''
+        SELECT updateDate FROM active_bill_list
+        WHERE congress = ? AND billNumber = ? AND billType = ? AND title = ? AND latestActionDate = ?
+        ''', (
+            bill["congress"],
+            bill["number"],
+            bill["type"].lower(),
+            bill["title"],
+            bill["latestAction"]["actionDate"]
+        ))
+
+        existing_bill = cursor.fetchone()
+
+        if existing_bill:
+            # If the existing bill is older, delete it
+            if existing_bill[0] < bill["updateDate"]:
+                cursor.execute('''
+                DELETE FROM active_bill_list
+                WHERE congress = ? AND billNumber = ? AND billType = ? AND title = ? AND latestActionDate = ?
+                ''', (
+                    bill["congress"],
+                    bill["number"],
+                    bill["type"].lower(),
+                    bill["title"],
+                    bill["latestAction"]["actionDate"]
+                ))
+            else:
+                continue  # Skip this bill if it's not newer
+
+        # Insert the new or updated bill
         cursor.execute('''
         INSERT INTO active_bill_list (
             congress, billNumber, billType, title, originChamber, originChamberCode,
-            latestActionDate, latestActionText, updateDate, url
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            latestActionDate, latestActionText, updateDate, url, actions_updated, insert_date, importance
+        ) VALUES (?, ?, lower(?), ?, ?, ?, ?, ?, ?, ?, 0, CURRENT_TIMESTAMP, NULL)
         ''', (
             bill["congress"],
             bill["number"],
@@ -139,11 +173,11 @@ def main():
                 logging.info("Reached bills older than the session start date. Stopping the process.")
                 break
 
-            insert_bills(bills)
+            insert_or_update_bills(bills)
             total_bills += len(bills)
             offset += len(bills)
 
-            logging.info(f"Fetched and inserted {len(bills)} bills. Total: {total_bills}")
+            logging.info(f"Fetched and processed {len(bills)} bills. Total: {total_bills}")
 
             if len(bills) < 250:  # If we get less than the maximum, we've reached the end
                 break
@@ -154,7 +188,7 @@ def main():
             logging.error(f"Error fetching data: {e}")
             break
 
-    logging.info(f"Completed. Total bills fetched and stored: {total_bills}")
+    logging.info(f"Completed. Total bills fetched and processed: {total_bills}")
 
 if __name__ == "__main__":
     main()

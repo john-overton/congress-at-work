@@ -21,7 +21,7 @@ ACTIVE_BILLS_DB = os.path.join(os.getcwd(), "congress_api_scraper", "sys_db", "a
 # Logging configuration
 LOG_DIR = os.path.join(os.getcwd(), "congress_api_scraper", "Logs")
 os.makedirs(LOG_DIR, exist_ok=True)
-LOG_FILE = os.path.join(LOG_DIR, "get_bill_actions.log")
+LOG_FILE = os.path.join(LOG_DIR, "get_active_bill_actions.log")
 
 logging.basicConfig(filename=LOG_FILE, level=logging.INFO,
                     format='%(asctime)s - %(levelname)s - %(message)s')
@@ -53,6 +53,7 @@ def get_active_bills():
     cursor.execute('''
     SELECT congress, LOWER(billType), billNumber
     FROM active_bill_list
+    WHERE actions_updated = 0
     ORDER BY congress DESC
     ''')
     
@@ -120,6 +121,13 @@ def insert_actions(actions, congress, bill_type, bill_number):
         else:
             skipped_count += 1
 
+    # Update the actions_updated flag in the active_bill_list table
+    cursor.execute('''
+    UPDATE active_bill_list
+    SET actions_updated = 1
+    WHERE congress = ? AND billType = ? AND billNumber = ?
+    ''', (congress, bill_type, bill_number))
+
     conn.commit()
     conn.close()
     logging.info(f"Inserted {inserted_count} new actions, skipped {skipped_count} existing actions, and encountered {error_count} errors for {congress} {bill_type}-{bill_number}")
@@ -128,6 +136,7 @@ def main():
     logging.info("Starting bill actions update process")
     create_database()
     active_bills = get_active_bills()
+    logging.info(f"{len(active_bills)} active bills requiring updates.")
     
     for congress, bill_type, bill_number in active_bills:
         try:
