@@ -16,7 +16,7 @@ logging.basicConfig(level=logging.INFO,
 
 # Set Active Hours
 ACTIVE_HOURS_START = 7  # Start of active hours (7 AM)
-ACTIVE_HOURS_END = 19  # End of active hours (7 PM)
+ACTIVE_HOURS_END = 23  # End of active hours (7 PM)
 RUN_INTERVAL = 3600 # Restart interval time
 
 def is_active_hours():
