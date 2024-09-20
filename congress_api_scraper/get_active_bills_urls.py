@@ -46,6 +46,7 @@ def create_target_table():
                 formatted_text_url TEXT,
                 formatted_xml_url TEXT,
                 pdf_url TEXT,
+                insert_date DATETIME,
                 PRIMARY KEY (congress, billNumber, billType)
             )
         """)
@@ -102,37 +103,57 @@ def update_active_bill_urls():
     try:
         cursor.execute("""
             SELECT a.congress, a.billNumber, a.billType, a.latestActionDate, 
-                   u.latest_date
+                   u.latest_date, u.insert_date
             FROM active_bill_list a
             LEFT JOIN active_bill_urls u
             ON a.congress = u.congress AND a.billNumber = u.billNumber AND a.billType = u.billType
         """)
         
         for row in cursor.fetchall():
-            congress, bill_number, bill_type, latest_action_date, existing_latest_date = row
+            congress, bill_number, bill_type, latest_action_date, existing_latest_date, existing_insert_date = row
             
-            if existing_latest_date is None or latest_action_date > existing_latest_date:
+            should_update = False
+            if existing_insert_date is None:
+                should_update = True
+            else:
+                latest_action_date = datetime.strptime(latest_action_date, "%Y-%m-%d")
+                existing_insert_date = datetime.strptime(existing_insert_date, "%Y-%m-%d %H:%M:%S")
+                if latest_action_date > existing_insert_date:
+                    should_update = True
+                else:
+                    logging.info(f"Skipping bill {congress}.{bill_type}.{bill_number}. Latest text already pulled.")
+            if should_update:
+                # Delete existing row if it's outdated
+                if existing_insert_date is not None:
+                    cursor.execute("""
+                        DELETE FROM active_bill_urls
+                        WHERE congress = ? AND billNumber = ? AND billType = ?
+                    """, (congress, bill_number, bill_type.lower()))
+                
                 bill_data = fetch_bill_data(congress, bill_type.lower(), bill_number)
                 
                 if bill_data and 'textVersions' in bill_data:
                     latest_date, latest_urls = get_latest_formatted_urls(bill_data['textVersions'])
                     if latest_date:
+                        current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                         cursor.execute('''
-                            INSERT OR REPLACE INTO active_bill_urls 
-                            (congress, billNumber, billType, latest_date, formatted_text_url, formatted_xml_url, pdf_url)
-                            VALUES (?, ?, ?, ?, ?, ?, ?)
+                            INSERT INTO active_bill_urls 
+                            (congress, billNumber, billType, latest_date, formatted_text_url, formatted_xml_url, pdf_url, insert_date)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                         ''', (congress, bill_number, bill_type.lower(), latest_date, 
                               latest_urls["formatted_text_url"], 
                               latest_urls["formatted_xml_url"], 
-                              latest_urls["pdf_url"]))
+                              latest_urls["pdf_url"],
+                              current_time))
                         conn.commit()
                         logging.info(f"Updated data for bill {bill_type}{bill_number} in congress {congress}")
+                        time.sleep(DELAY_BETWEEN_CALLS)
                     else:
                         logging.warning(f"No formatted URLs found for bill {bill_type}{bill_number} in congress {congress}")
+                        time.sleep(DELAY_BETWEEN_CALLS)
                 else:
                     logging.warning(f"No text versions found for bill {bill_type}{bill_number} in congress {congress}")
-            
-            time.sleep(DELAY_BETWEEN_CALLS)
+                    time.sleep(DELAY_BETWEEN_CALLS)            
 
     except sqlite3.Error as e:
         logging.error(f"Database error: {e}")
