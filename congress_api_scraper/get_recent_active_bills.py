@@ -77,10 +77,14 @@ def get_active_congress():
         sys.exit(1)
 
 def fetch_bills(congress, offset=0):
+    four_days_ago = datetime.now() - timedelta(days=4)
+    now = datetime.now()
     params = {
         "format": "json",
         "offset": offset,
         "limit": 250,  # Maximum allowed by the API
+        "fromDateTime": four_days_ago.strftime("%Y-%m-%dT00:00:00Z"),
+        "toDateTime": now.strftime("%Y-%m-%dT00:00:00Z"),
         "sort": "updateDate+desc",
         "api_key": API_KEY
     }
@@ -91,17 +95,12 @@ def fetch_bills(congress, offset=0):
     response.raise_for_status()
     return response.json()["bills"]
 
-def insert_or_update_bills(bills, cutoff_date):
+def insert_or_update_bills(bills):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
 
     inserted_count = 0
     for bill in bills:
-        bill_update_date = datetime.strptime(bill["updateDate"], "%Y-%m-%d")
-        
-        # Skip bills older than the cutoff date
-        if bill_update_date < cutoff_date:
-            continue
 
         # Check if the bill already exists
         cursor.execute('''
@@ -170,8 +169,7 @@ def main():
     total_bills = 0
     offset = 0
     active_congress = get_active_congress()
-    cutoff_date = datetime.now() - timedelta(days=4)
-    logging.info(f"Active Congress: {active_congress}, Cutoff Date: {cutoff_date}")
+    logging.info(f"Active Congress: {active_congress}")
 
     while True:
         try:
@@ -179,17 +177,11 @@ def main():
             if not bills:
                 break
 
-            inserted_count = insert_or_update_bills(bills, cutoff_date)
+            inserted_count = insert_or_update_bills(bills)
             total_bills += inserted_count
             offset += len(bills)
 
             logging.info(f"Fetched {len(bills)} bills, inserted/updated {inserted_count}. Total processed: {total_bills}")
-
-            # Check if we've reached bills older than the cutoff date
-            oldest_bill_date = datetime.strptime(bills[-1]["updateDate"], "%Y-%m-%d")
-            if oldest_bill_date < cutoff_date:
-                logging.info("Reached bills older than the cutoff date. Stopping the process.")
-                break
 
             if len(bills) < 250:  # If we get less than the maximum, we've reached the end
                 break

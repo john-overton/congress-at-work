@@ -49,57 +49,57 @@ def save_html_content(url, filename):
         logging.error(f"Failed to fetch or save URL {url}. Error: {str(e)}")
         return False
 
-def file_exists_and_is_current(congress, billType, billNumber, latest_date):
+def file_exists_and_is_current(congress, billType, billNumber, formatted_date):
     output_dir = os.path.join(SCRIPT_DIR, OUTPUT_FOLDER)
-    formatted_latest_date = latest_date.split()[0]  # Get YYYY-MM-DD part
+    formatted_latest_date = formatted_date.split()[0]  # Get YYYY-MM-DD part
+    existing_file = None
+    is_current = False
+
     for file in os.listdir(output_dir):
         parts = file.split('.')
-        if len(parts) >= 5:
-            if parts[0] == congress and parts[1] == billType and parts[2] == billNumber:
-                file_date = parts[3]
-                if file_date == formatted_latest_date:
-                    return True, file
-                else:
-                    return False, file
-    return False, None
+        if len(parts) >= 5 and parts[0] == congress and parts[1] == billType and parts[2] == billNumber:
+            existing_file = file
+            file_date = parts[3]
+            if file_date == formatted_latest_date:
+                is_current = True
+                break
+
+    return is_current, existing_file
 
 def main():
     logging.info("Starting Active Bill HTM Scraper")
     conn = connect_to_db()
     try:
-        # Ensure output folder exists
         output_dir = os.path.join(SCRIPT_DIR, OUTPUT_FOLDER)
         Path(output_dir).mkdir(parents=True, exist_ok=True)
         logging.info(f"Output directory: {output_dir}")
 
-        # Fetch and save new/updated HTML content
         active_bill_urls = get_active_bill_urls(conn)
         logging.info(f"Found {len(active_bill_urls)} active bills to process")
-        for congress, billType, billNumber, latest_date, url in active_bill_urls:
-            # Format the latest_date to be YYYY-MM-DD
-            formatted_latest_date = latest_date.split()[0]
+        for congress, billType, billNumber, formatted_date, url in active_bill_urls:
+            formatted_latest_date = formatted_date.split()[0]
             
-            is_current, existing_file = file_exists_and_is_current(congress, billType, billNumber, latest_date)
+            is_current, existing_file = file_exists_and_is_current(congress, billType, billNumber, formatted_date)
             
-            if not is_current:
-                if existing_file:
-                    old_file_path = os.path.join(output_dir, existing_file)
-                    os.remove(old_file_path)
-                    logging.info(f"Deleted outdated file: {existing_file}")
-                
-                current_date = datetime.now().strftime("%Y-%m-%d-%H%M")
-                filename = f"{congress}.{billType}.{billNumber}.{formatted_latest_date}.{current_date}.htm"
-                full_path = os.path.join(output_dir, filename)
-                
-                if save_html_content(url, full_path):
-                    logging.info(f"Saved: {filename}")
-                else:
-                    logging.error(f"Failed to save: {filename}")
-                
-                time.sleep(DELAY_BETWEEN_CALLS)
+            if is_current:
+                logging.info(f"File is current for {congress}.{billType}.{billNumber}.{formatted_latest_date}. Skipping.")
+                continue
+
+            if existing_file:
+                old_file_path = os.path.join(output_dir, existing_file)
+                os.remove(old_file_path)
+                logging.info(f"Deleted outdated file: {existing_file}")
+
+            current_date = datetime.now().strftime("%Y-%m-%d-%H%M")
+            filename = f"{congress}.{billType}.{billNumber}.{formatted_latest_date}.{current_date}.htm"
+            full_path = os.path.join(output_dir, filename)
             
+            if save_html_content(url, full_path):
+                logging.info(f"Saved: {filename}")
             else:
-                logging.info(f"File is current for {congress}.{billType}.{billNumber}.{formatted_latest_date}")
+                logging.error(f"Failed to save: {filename}")
+            
+            time.sleep(DELAY_BETWEEN_CALLS)
 
     except Exception as e:
         logging.exception("An unexpected error occurred:")
