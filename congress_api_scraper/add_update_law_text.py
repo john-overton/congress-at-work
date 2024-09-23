@@ -15,13 +15,13 @@ DELAY_BETWEEN_CALLS = 1  # 1 second delay between API calls
 RETRY_DELAY = 60  # 60 second retry delay on connection error
 
 # Configure Loggins
-log_file = os.path.join(os.getcwd(), "congress_api_scraper", "Logs", "add_update_bill_text.log")
+log_file = os.path.join(os.getcwd(), "congress_api_scraper", "Logs", "add_update_law_text.log")
 logging.basicConfig(filename=log_file, level=logging.INFO,
                     format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Database and folder configuration
-DB_NAME = os.path.join(os.getcwd(), "congress_api_scraper", "sys_db", "bill_url_list.db")
-OUTPUT_FOLDER = "bill_text_htm"
+DB_NAME = os.path.join(os.getcwd(), "congress_api_scraper", "sys_db", "law_url_list.db")
+OUTPUT_FOLDER = "law_text_htm"
 
 # Get the directory of the script
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -82,7 +82,7 @@ def file_exists(congress, bill_type, bill_number, formatted_date):
     return False
 
 def main():
-    logging.info("Starting HTM Bill Scraper")
+    logging.info("Starting HTM law Scraper")
     conn = connect_to_db()
     try:
         # Ensure output folder exists
@@ -119,7 +119,7 @@ def main():
     finally:
         conn.close()
 
-    logging.info("HTM Bill Scraper completed")
+    logging.info("HTM law Scraper completed")
 
 if __name__ == "__main__":
     main()

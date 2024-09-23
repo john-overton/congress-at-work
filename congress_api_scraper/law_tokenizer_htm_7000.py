@@ -12,8 +12,8 @@ token_max_size = 7000
 
 # Define the paths relative to the script's location
 script_dir = os.path.dirname(os.path.abspath(__file__))
-htm_folder = os.path.join(script_dir, 'bill_text_htm')
-db_folder = os.path.join(script_dir, 'bill_text_db')
+htm_folder = os.path.join(script_dir, 'law_text_htm')
+db_folder = os.path.join(script_dir, 'law_text_db')
 
 def create_database(db_path):
     conn = sqlite3.connect(db_path)
