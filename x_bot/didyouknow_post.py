@@ -26,7 +26,7 @@ def get_random_tweet():
         cursor.execute("""
             SELECT tweet_id, tweet_text 
             FROM didyouknow_tweet 
-            WHERE tweeted = 0 AND tweet_text_len <= 280
+            WHERE tweeted = 0
             ORDER BY RANDOM() 
             LIMIT 1
         """)
