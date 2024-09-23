@@ -150,7 +150,7 @@ def process_bill_files():
     if conn is not None:
         create_bill_parameters_table(conn)
         
-        bill_dir = os.path.join(root_dir, 'congress_api_scraper', 'bill_text_htm')
+        bill_dir = os.path.join(root_dir, 'congress_api_scraper', 'law_text_htm')
         if not os.path.exists(bill_dir):
             logging.error(f"Bill directory does not exist: {bill_dir}")
             print(f"Error: Bill directory does not exist: {bill_dir}")
@@ -245,7 +245,7 @@ def process_tweets():
             if existing_tweets < total_expected_tweets:
                 # Generate and insert new tweets
                 bill_file = f"{congress}.{bill_type}.{bill_number}.*.htm"
-                bill_dir = os.path.join(root_dir, 'congress_api_scraper', 'bill_text_htm')
+                bill_dir = os.path.join(root_dir, 'congress_api_scraper', 'law_text_htm')
                 matching_files = [f for f in os.listdir(bill_dir) if f.startswith(f"{congress}.{bill_type}.{bill_number}.")]
                 
                 if matching_files:
