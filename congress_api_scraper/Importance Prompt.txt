@@ -1,4 +1,4 @@
-<Instructions> As an unbiased reporter, provide a detailed update on current actions for the legistlation in question.  Ensure the output reads like a newspaper column. If providing insights chronologically ensure they are in proper order by date.  Provide context from the bill text itself if appropriate.  If you do reference form the bill text always include section of the text the reference comes from.  I will provide a current congress, bill number, title, text, and actions.</Instructions>
+<Instructions>I need a one word response that is based on all analysis and context of an active bill and action.  The response should be "Very Important", "Important", or "Not Important".  You should interperate the response based on how much an action and bill impacts the nation, and society.  You will need take into consideration the full context of the bill and what may be controversial but with an unbiased lens.  I will provide a current congress, bill number, title, text, and actions.</Instructions>
 
 <Additional Details>
 Todays date is 09/23/2024.
@@ -119,12 +119,13 @@ any challenges faced accessing information under such section.
 </Bill Actions>
 
 
+Important 100% of the time
 
 
 
------------------------------------------------------------------
+--------------------------------------
 
-<Instructions> As an unbiased reporter, provide a detailed update on current actions for the legistlation in question.  Ensure the output reads like a newspaper column but ensure there is a title included. If providing insights chronologically ensure they are in proper order by date.  Provide context from the bill text itself if appropriate.  If you do reference form the bill text always include section of the text the reference comes from.  I will provide a current congress, bill number, title, text, and actions.</Instructions>
+<Instructions>I need a one word response that is based on all analysis and context of an active bill and action.  The response should be "Very Important", "Important", or "Not Important".  You should interperate the response based on how much an action and bill impacts the nation, and society.  You will need take into consideration the full context of the bill and what may be controversial but with an unbiased lens.  I will provide a current congress, bill number, title, text, and actions.</Instructions>
 
 <Additional Details>
 Todays date is 09/23/2024.
@@ -310,4 +311,102 @@ Making supplemental appropriations for the fiscal year ending September
 118	hr	9468	1000	2024-09-06	Introduced in House	IntroReferral
 118	hr	9468	H11100	2024-09-06	Referred to the House Committee on Appropriations.	IntroReferral
 118	hr	9468	Intro-H	2024-09-06	Introduced in House	IntroReferral
-</Bill Actions>D
+</Bill Actions>
+
+Very Important 100% of the time
+
+
+
+
+-------------------------------------------
+
+<Instructions>I need a one word response that is based on all analysis and context of an active bill and action.  The response should be "Very Important", "Important", or "Not Important".  You should interperate the response based on how much an action and bill impacts the nation, and society.  You will need take into consideration the full context of the bill and what may be controversial but with an unbiased lens.  I will provide a current congress, bill number, title, text, and actions.</Instructions>
+
+<Additional Details>
+Todays date is 09/23/2024.
+
+Current sitting President: Joe Biden
+
+Key action meanings:
+"Presented to President" - This means the legistlation has been brought forward to the Presidents office but the legistlation has not yet been signed or vetod.
+"Signed by President" - This means the legistlation has been signed by the president and become public law.
+
+</Additional Details>
+
+<Congress>118</Congress>
+
+<Bill Title>To designate the visitor and education center at Fort McHenry National Monument and Historic Shrine as the Paul S. Sarbanes Visitor and Education Center.</Bill Title>
+
+<Bill Number>HR 6826</Bill Number>
+
+<Bill Text>
+[Congressional Bills 118th Congress]
+[From the U.S. Government Publishing Office]
+[H.R. 6826 Introduced in House (IH)]
+
+<DOC>
+
+
+
+
+
+
+118th CONGRESS
+  1st Session
+                                H. R. 6826
+
+To designate the visitor and education center at Fort McHenry National 
+   Monument and Historic Shrine as the Paul S. Sarbanes Visitor and 
+                           Education Center.
+
+
+_______________________________________________________________________
+
+
+                    IN THE HOUSE OF REPRESENTATIVES
+
+                           December 14, 2023
+
+   Mr. Mfume (for himself, Mr. Hoyer, Mr. Sarbanes, Mr. Harris, Mr. 
+  Raskin, Mr. Trone, Mr. Ruppersberger, and Mr. Ivey) introduced the 
+    following bill; which was referred to the Committee on Natural 
+                               Resources
+
+_______________________________________________________________________
+
+                                 A BILL
+
+
+ 
+To designate the visitor and education center at Fort McHenry National 
+   Monument and Historic Shrine as the Paul S. Sarbanes Visitor and 
+                           Education Center.
+
+    Be it enacted by the Senate and House of Representatives of the 
+United States of America in Congress assembled,
+
+SECTION 1. DESIGNATION.
+
+    (a) Designation.--The visitor and education center at Fort McHenry 
+National Monument and Historic Shrine, currently located at 2400 E Fort 
+Ave, Baltimore, MD 21230, is designated as the ``Paul S. Sarbanes 
+Visitor and Education Center''.
+    (b) References.--Any reference in a law, map, regulation, document, 
+paper, or other document of the United States to the visitor center 
+designated by subsection (a) shall be deemed to be a reference to the 
+Paul S. Sarbanes Visitor and Education Center.
+                                 <all>
+</Bill Text>
+
+<Bill Actions>
+118	hr	6826	H15001	2024-09-19	Committee Consideration and Mark-up Session Held	Committee
+118	hr	6826	H19000	2024-09-19	Ordered to be Reported by Unanimous Consent.	Committee
+118	hr	6826	H25000	2024-09-19	Subcommittee on Federal Lands Discharged	Committee
+118	hr	6826	H21000	2024-06-27	Subcommittee Hearings Held	Committee
+118	hr	6826	H11000	2024-06-24	Referred to the Subcommittee on Federal Lands.	Committee
+118	hr	6826	1000	2023-12-14	Introduced in House	IntroReferral
+118	hr	6826	H11100	2023-12-14	Referred to the House Committee on Natural Resources.	IntroReferral
+118	hr	6826	Intro-H	2023-12-14	Introduced in House	IntroReferral
+</Bill Actions>
+
+Not Important 100%
