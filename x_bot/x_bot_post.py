@@ -141,5 +141,5 @@ def post_tweet(tweet_text):
 
 # Example usage
 if __name__ == "__main__":
-    sample_tweet = "This is a test tweet from the simplified OAuth 2.0 script!"
+    sample_tweet = "**test**, **_test2_**, _test3_, This is a test tweet from the simplified OAuth 2.0 script!"
     post_tweet(sample_tweet)

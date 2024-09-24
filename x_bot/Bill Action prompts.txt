@@ -27,14 +27,14 @@ Key action meanings:
 
 
 
-
-
 -----------------------------------------------------------------
 
-<Instructions> As an unbiased reporter, provide a detailed report on the current state of this legistlation.  Include details about the bills journey and details about what the bill contains.  Double and triple check to make sure the content generated is facts derived directly from the legistlation text and actions only.  Make the response as long as possible.  Do not attribute party to any sponsors or co-sponsors.  Ensure the output reads like a newspaper column but ensure there is a title included. If providing insights chronologically ensure they are in proper order by date.  Provide context from the bill text itself if appropriate.  If you do reference form the bill text always include section of the text the reference comes from.  I will provide a current congress, bill number, title, text, and actions.</Instructions>
+<Instructions> As an unbiased reporter, provide a formal report on the current state of this legistlation.  Include details about the bills journey and details about what the bill contains.  Double and triple check to make sure the content generated is facts derived directly from the legistlation text and actions only.  Make the response as long as possible.  Do not attribute party to any sponsors or co-sponsors.  Ensure the output reads like a newspaper column but ensure there is a title included. If providing insights chronologically ensure they are in proper order by date.  Provide context from the bill text itself if appropriate.  If you do reference form the bill text always include section of the text the reference comes from.  I will provide a current congress, bill number, title, text, and actions.</Instructions>
+
+<Formatting>Reponse should in plain text.  The report title should be the full bill title should be on its own line followed by a ":".  Bold must be enclosed with <b></b>.  Never format with any italic text.  Do not bullet point any lists, instead just start a new line for listed element.</Formatting>
 
 <Additional Details>
-Todays date is 09/23/2024.
+Todays date is 09/24/2024.
 
 Current sitting President: Joe Biden
 
@@ -201,20 +201,21 @@ Making supplemental appropriations for the fiscal year ending September
 </Bill Text>
 
 <Bill Actions>
-118	hr	9468	36000	2024-09-20	Signed by President.	BecameLaw
-118	hr	9468	E30000	2024-09-20	Signed by President.	President
-118	hr	9468		2024-09-19	Message on Senate action sent to the House.	Floor
-118	hr	9468	17000	2024-09-19	Passed/agreed to in Senate: Passed Senate without amendment by Voice Vote.	Floor
-118	hr	9468	28000	2024-09-19	Presented to President.	President
-118	hr	9468	E20000	2024-09-19	Presented to President.	Floor
-118	hr	9468		2024-09-17	Received in the Senate.	IntroReferral
-118	hr	9468	8000	2024-09-17	Passed/agreed to in House: On motion to suspend the rules and pass the bill Agreed to by voice vote.	Floor
-118	hr	9468	H30000	2024-09-17	Considered under suspension of the rules.	Floor
-118	hr	9468	H30300	2024-09-17	Mr. Garcia, Mike moved to suspend the rules and pass the bill.	Floor
-118	hr	9468	H37300	2024-09-17	On motion to suspend the rules and pass the bill Agreed to by voice vote.	Floor
-118	hr	9468	H38310	2024-09-17	Motion to reconsider laid on the table Agreed to without objection.	Floor
-118	hr	9468	H8D000	2024-09-17	DEBATE - The House proceeded with forty minutes of debate on H.R. 9468.	Floor
-118	hr	9468	1000	2024-09-06	Introduced in House	IntroReferral
-118	hr	9468	H11100	2024-09-06	Referred to the House Committee on Appropriations.	IntroReferral
-118	hr	9468	Intro-H	2024-09-06	Introduced in House	IntroReferral
+118	hr	9468	2024-09-20	Signed by President.
+118	hr	9468	2024-09-20	Signed by President.
+118	hr	9468	2024-09-20	Became Public Law No: 118-82.
+118	hr	9468	2024-09-19	Message on Senate action sent to the House.
+118	hr	9468	2024-09-19	Passed/agreed to in Senate: Passed Senate without amendment by Voice Vote.
+118	hr	9468	2024-09-19	Presented to President.
+118	hr	9468	2024-09-19	Presented to President.
+118	hr	9468	2024-09-17	Received in the Senate.
+118	hr	9468	2024-09-17	Passed/agreed to in House: On motion to suspend the rules and pass the bill Agreed to by voice vote.
+118	hr	9468	2024-09-17	Considered under suspension of the rules.
+118	hr	9468	2024-09-17	Mr. Garcia, Mike moved to suspend the rules and pass the bill.
+118	hr	9468	2024-09-17	On motion to suspend the rules and pass the bill Agreed to by voice vote.
+118	hr	9468	2024-09-17	Motion to reconsider laid on the table Agreed to without objection.
+118	hr	9468	2024-09-17	DEBATE - The House proceeded with forty minutes of debate on H.R. 9468.
+118	hr	9468	2024-09-06	Introduced in House
+118	hr	9468	2024-09-06	Referred to the House Committee on Appropriations.
+118	hr	9468	2024-09-06	Introduced in House
 </Bill Actions>

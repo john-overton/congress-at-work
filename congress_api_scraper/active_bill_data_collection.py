@@ -6,6 +6,7 @@ import google.generativeai as genai
 from google.generativeai.types import HarmCategory, HarmBlockThreshold
 import sys
 import time
+import re
 
 # Get the absolute path of the script
 script_path = os.path.abspath(__file__)
@@ -38,10 +39,10 @@ except Exception as e:
 
 # Set up the model
 generation_config = {
-    "temperature": 1,
+    "temperature": 0.75,
     "top_p": 0.95,
     "top_k": 64,
-    "max_output_tokens": 8192,
+    "max_output_tokens": 7500,
     "response_mime_type": "text/plain",
 }
 
@@ -65,7 +66,7 @@ safety_settings = [
 ]
 
 try:
-    model = genai.GenerativeModel(model_name="gemini-1.5-flash",
+    model = genai.GenerativeModel(model_name="gemini-1.5-flash-exp-0827",
                                   generation_config=generation_config,
                                   safety_settings=safety_settings)
     logging.info("Generative model initialized successfully")
@@ -76,11 +77,24 @@ except Exception as e:
 def connect_to_db(db_path):
     try:
         conn = sqlite3.connect(db_path)
+        conn.text_factory = str
         logging.info(f"Successfully connected to database: {db_path}")
         return conn
     except sqlite3.Error as e:
         logging.error(f"Error connecting to database {db_path}: {str(e)}")
         raise
+
+def convert_bold_to_unicode(text):
+    # Define Unicode range for bold letters and numbers
+    bold_map = {chr(ord('A') + i): chr(0x1D400 + i) for i in range(26)}  # Uppercase
+    bold_map.update({chr(ord('a') + i): chr(0x1D41A + i) for i in range(26)})  # Lowercase
+    bold_map.update({chr(ord('0') + i): chr(0x1D7CE + i) for i in range(10)})  # Numbers
+
+    def replace_bold(match):
+        return ''.join(bold_map.get(c, c) for c in match.group(1))
+
+    # Replace bold text
+    return re.sub(r'<b>(.*?)</b>', replace_bold, text)
 
 def get_bill_info(conn, congress, bill_type, bill_number):
     try:
@@ -122,7 +136,7 @@ def get_bill_actions(conn, congress, bill_type, bill_number):
     try:
         cursor = conn.cursor()
         cursor.execute("""
-            SELECT *
+            SELECT actionDate, actionText
             FROM bill_actions
             WHERE congress = ? AND billType = ? AND billNumber = ?
             ORDER BY actionDate
@@ -159,7 +173,7 @@ def get_all_bills(conn):
     try:
         cursor = conn.cursor()
         cursor.execute("""
-            SELECT congress, bill_type, bill_number, bill_text, summary, full_synopsis
+            SELECT congress, bill_type, bill_number, bill_text, summary, formal_report
             FROM bill_text
         """)
         result = cursor.fetchall()
@@ -183,18 +197,18 @@ def update_summary(conn, congress, bill_type, bill_number, summary):
         logging.error(f"Error updating summary: {str(e)}")
         raise
 
-def update_synopsis(conn, congress, bill_type, bill_number, synopsis):
+def update_formal_report(conn, congress, bill_type, bill_number, formal_report):
     try:
         cursor = conn.cursor()
         cursor.execute("""
             UPDATE bill_text
-            SET full_synopsis = ?
+            SET formal_report = ?
             WHERE congress = ? AND bill_type = ? AND bill_number = ?
-        """, (synopsis, congress, bill_type, bill_number))
+        """, (formal_report, congress, bill_type, bill_number))
         conn.commit()
-        logging.info(f"Updated full synopsis for bill {congress}.{bill_type}.{bill_number}")
+        logging.info(f"Updated formal report for bill {congress}.{bill_type}.{bill_number}")
     except sqlite3.Error as e:
-        logging.error(f"Error updating full synopsis: {str(e)}")
+        logging.error(f"Error updating formal report: {str(e)}")
         raise
 
 def construct_prompt(congress, bill_type, bill_number, bill_title, bill_text, bill_actions, is_summary=True):
@@ -202,14 +216,18 @@ def construct_prompt(congress, bill_type, bill_number, bill_title, bill_text, bi
     
     prompt = f"""
     <Instructions>
-    As an unbiased reporter, provide a {'summary' if is_summary else 'full synopsis'} on current actions for the legislation in question. Ensure the output reads like a newspaper column.  Do not provide any party affiliatons of sponsors or co-sponsors. If providing insights chronologically ensure they are in proper order by date. Provide context from the bill text itself if appropriate. If you do reference from the bill text always include section of the text the reference comes from. I will provide a current congress, bill number, title, text, and actions.
+    As an unbiased reporter, provide a {'summary on current actions and high level important facts for the legislation in question' if is_summary else 'formal report on the current state of this legistlation.  Include details about the bills journey and details about what the bill contains. Ensure the output reads like a newspaper column'}.  Do not provide any party affiliatons of sponsors or co-sponsors. If providing insights chronologically ensure they are in proper order by date. Provide context from the bill text itself if appropriate. If you do reference from the bill text always include section of the text the reference comes from. I will provide a current congress, bill number, title, text, and actions.
     </Instructions>
-
+    <Formatting>The report title should be the full bill title on its own line followed by a ":".  Bold must be enclosed with <b></b>.  Never format with any italic text.  Do not bullet point any lists, instead just start a new line for listed element.</Formatting>
     <Additional Details>
     Today's date is {today_date}. Current sitting President: Joe Biden
     Key action meanings:
     "Presented to President" - This means the legislation has been brought forward to the President's office but the legislation has not yet been signed or vetoed.
     "Signed by President" - This means the legislation has been signed by the president and become public law.
+    Bills: A bill is the form used for most legislation, whether permanent or temporary, general or special, public or private.  A bill originating in the Senate is designated by the letters “S”, signifying “Senate”, followed by a number that it retains throughout all its parliamentary stages. A bill originating in the House of Representatives is designated by the letters “H.R.”, signifying “House of Representatives”, followed by a number that it retains throughout all its parliamentary stages. Bills are presented to the President for action when approved in identical form by both the House of Representatives and the Senate.
+    Joint Resolutions:  Joint resolutions may originate either in the House of Representatives or in the Senate. There is little practical difference between a bill and a joint resolution. Both are subject to the same procedure, except for a joint resolution proposing an amendment to the Constitution. On approval of such a resolution by two-thirds of both the House and Senate, it is sent directly to the Administrator of General Services for submission to the individual states for ratification. It is not presented to the President for approval. A joint resolution originating in the House of Representatives is designated “H.J.Res.” followed by its individual number. Joint resolutions become law in the same manner as bills.
+    Concurrent Resolutions: Matters affecting the operations of both the House of Representatives and Senate are usually initiated by means of concurrent resolutions. A concurrent resolution originating in the House of Representatives is designated “H.Con.Res.” followed by its individual number. On approval by both the House of Representatives and Senate, they are signed by the Clerk of the House and the Secretary of the Senate. They are not presented to the President for action.
+    Simple Resolutions: A matter concerning the operation of either the House of Representatives or Senate alone is initiated by a simple resolution. A resolution affecting the House of Representatives is designated “H.Res.” followed by its number. They are not presented to the President for action.
     </Additional Details>
 
     <Congress>{congress}</Congress>
@@ -222,23 +240,27 @@ def construct_prompt(congress, bill_type, bill_number, bill_title, bill_text, bi
     {bill_actions}
     </Bill Actions>
     """
-    logging.info(f"Constructed {'summary' if is_summary else 'synopsis'} prompt for bill {congress}.{bill_type}.{bill_number}")
+    logging.info(f"Constructed {'summary' if is_summary else 'full report'} prompt for bill {congress}.{bill_type}.{bill_number}")
     return prompt
 
 def generate_content(prompt):
     try:
         response = model.generate_content(prompt)
         logging.info("Generated content from AI model")
-        return response.text
+        # CONVERTS Response to unicode text for formatting
+        response_converted = convert_bold_to_unicode(response.text)
+        # print(f"{response.text}")
+        # print(f"{response_converted}")
+        return response_converted
     except Exception as e:
         logging.error(f"Error generating content: {str(e)}")
         raise
 
-def process_bill(conn_data, conn_text, congress, bill_type, bill_number, bill_text, existing_summary, existing_synopsis):
+def process_bill(conn_data, conn_text, congress, bill_type, bill_number, bill_text, existing_summary, existing_formal_report):
     try:
-        # Check if both summary and synopsis already exist
-        if existing_summary and existing_synopsis:
-            logging.info(f"Skipping bill {congress}.{bill_type}.{bill_number} - summary and synopsis already exist")
+        # Check if both summary and full report already exist
+        if existing_summary and existing_formal_report:
+            logging.info(f"Skipping bill {congress}.{bill_type}.{bill_number} - summary and full report already exist")
             return False  # Indicate that the bill was skipped
 
         bill_info = get_bill_info(conn_data, congress, bill_type, bill_number)
@@ -256,15 +278,15 @@ def process_bill(conn_data, conn_text, congress, bill_type, bill_number, bill_te
                 summary_with_url = f"{summary}\n\nSource: {formatted_text_url}"
                 update_summary(conn_text, congress, bill_type, bill_number, summary_with_url)
 
-                # Wait for 30 seconds before generating synopsis
+                # Wait for 30 seconds before generating full report
                 time.sleep(30)
 
-            # Generate full synopsis if it doesn't exist
-            if not existing_synopsis:
-                synopsis_prompt = construct_prompt(congress, bill_type, bill_number, bill_title, bill_text, bill_actions, is_summary=False)
-                synopsis = generate_content(synopsis_prompt)
-                synopsis_with_url = f"{synopsis}\n\nSource: {formatted_text_url}"
-                update_synopsis(conn_text, congress, bill_type, bill_number, synopsis_with_url)
+            # Generate full report if it doesn't exist
+            if not existing_formal_report:
+                formal_report_prompt = construct_prompt(congress, bill_type, bill_number, bill_title, bill_text, bill_actions, is_summary=False)
+                formal_report = generate_content(formal_report_prompt)
+                formal_report_with_url = f"{formal_report}\n\nSource: {formatted_text_url}"
+                update_formal_report(conn_text, congress, bill_type, bill_number, formal_report_with_url)
 
             logging.info(f"Successfully processed bill {congress}.{bill_type}.{bill_number}")
             return True  # Indicate that the bill was processed
