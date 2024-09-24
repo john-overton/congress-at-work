@@ -1,4 +1,11 @@
-<Instructions>I need a one word response that is based on all analysis and context of an active bill and action.  The response should be "Very Important", "Important", or "Not Important".  You should interperate the response based on how much an action and bill impacts the nation, and society.  You will need take into consideration the full context of the bill and what may be controversial but with an unbiased lens.  I will provide a current congress, bill number, title, text, and actions.</Instructions>
+<Instructions>
+I need a one word response that is based on all analysis and context of an active bill and action.  
+The response should be "Very Important", "Important", or "Not Important".  
+You should interperate the response based on how much an action and bill impacts the nation, and society.  
+You will need take into consideration the full context of the bill and what may be controversial but with an unbiased lens.  
+I will provide a current congress, bill number, title, text, and actions.
+
+</Instructions>
 
 <Additional Details>
 Todays date is 09/23/2024.
@@ -11,11 +18,20 @@ Key action meanings:
 
 </Additional Details>
 
-<Congress>118</Congress>
+<Congress>
+118
 
-<Bill Title>Congressional Budget Office Data Sharing Act</Bill Title>
+</Congress>
 
-<Bill Number>HR 7032</Bill Number>
+<Bill Title>
+Congressional Budget Office Data Sharing Act
+
+</Bill Title>
+
+<Bill Number>
+HR 7032
+
+</Bill Number>
 
 <Bill Text>
 [Congressional Bills 118th Congress]
@@ -93,6 +109,7 @@ any challenges faced accessing information under such section.
                                              KEVIN F. MCCUMBER,
 
                                                                  Clerk.
+
 </Bill Text>
 
 <Bill Actions>
@@ -116,6 +133,7 @@ any challenges faced accessing information under such section.
 118	hr	7032	1000	2024-01-18	Introduced in House	IntroReferral
 118	hr	7032	H11100	2024-01-18	Referred to the House Committee on the Budget.	IntroReferral
 118	hr	7032	Intro-H	2024-01-18	Introduced in House	IntroReferral
+
 </Bill Actions>
 
 
