@@ -8,7 +8,8 @@ from nltk.tokenize import word_tokenize
 from bs4 import BeautifulSoup
 
 # constraints
-token_max_size = 500000
+token_max_size = 15000
+context_size = 500
 
 # Define the paths relative to the script's location
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -28,8 +29,10 @@ def create_database():
             token_count INTEGER,
             text_part INTEGER,
             bill_text TEXT,
+            previous_context TEXT,
+            next_context TEXT,
             summary TEXT,
-            full_synopsis TEXT,
+            formal_report TEXT,
             appropriations TEXT,
             most_important_facts TEXT,
             most_controversial_facts TEXT,
@@ -55,29 +58,27 @@ def parse_filename(filename):
 def tokenize_text(text):
     return word_tokenize(text)
 
+def get_context(tokens, part_index, total_parts):
+    prev_context = ' '.join(tokens[max(0, part_index*token_max_size - context_size):part_index*token_max_size])
+    next_context = ' '.join(tokens[min((part_index+1)*token_max_size, len(tokens)):min((part_index+1)*token_max_size + context_size, len(tokens))])
+    return prev_context, next_context
+
 def insert_tokens(conn, congress, bill_type, bill_number, content):
     cursor = conn.cursor()
     current_time = datetime.now().isoformat()
     
     tokens = tokenize_text(content)
     text_parts = []
-    current_part = []
     
-    for token in tokens:
-        if len(current_part) + 1 > token_max_size:
-            text_parts.append(' '.join(current_part))
-            current_part = [token]
-        else:
-            current_part.append(token)
-    
-    if current_part:
-        text_parts.append(' '.join(current_part))
+    for i in range(0, len(tokens), token_max_size):
+        text_parts.append(' '.join(tokens[i:i+token_max_size]))
     
     for i, text in enumerate(text_parts, 1):
+        prev_context, next_context = get_context(tokens, i-1, len(text_parts))
         cursor.execute('''
-            INSERT INTO bill_text (congress, bill_type, bill_number, tokenized_date, token_count, text_part, bill_text)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        ''', (congress, bill_type, bill_number, current_time, len(text.split()), i, text))
+            INSERT INTO bill_text (congress, bill_type, bill_number, tokenized_date, token_count, text_part, bill_text, previous_context, next_context)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (congress, bill_type, bill_number, current_time, len(text.split()), i, text, prev_context, next_context))
     
     conn.commit()
 

@@ -1,14 +1,15 @@
 <Instructions>
-I need a one word response that is based on all analysis and context of an active bill and action.  
-The response should be "Very Important", "Important", or "Not Important".  
-You should interperate the response based on how much an action and bill impacts the nation, and society.  
+I need a one word response that is based on all analysis and context of an active bill and actions.  
+The response should be only be "Must Know", "Important", or "Minimal".
+ONLY USE ONE WORD.  DO NOT PROVIDE ANY ADDITIONAL CONTEXT.
+You are representing the general populace and you should interperate the response based on how much an action and bill impacts the nation, and society.  
 You will need take into consideration the full context of the bill and what may be controversial but with an unbiased lens.  
 I will provide a current congress, bill number, title, text, and actions.
 
 </Instructions>
 
 <Additional Details>
-Todays date is 09/23/2024.
+Todays date is 09/25/2024.
 
 Current sitting President: Joe Biden
 
