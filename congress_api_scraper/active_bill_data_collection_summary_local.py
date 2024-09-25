@@ -107,7 +107,7 @@ def get_all_bills(conn):
     try:
         cursor = conn.cursor()
         cursor.execute("""
-            SELECT congress, bill_type, bill_number, previous_context, bill_text, next_context, summary
+            SELECT congress, bill_type, bill_number, text_part, previous_context, bill_text, next_context, summary
             FROM bill_text
         """)
         result = cursor.fetchall()
@@ -117,21 +117,21 @@ def get_all_bills(conn):
         logging.error(f"Error retrieving all bills: {str(e)}")
         raise
 
-def update_summary(conn, congress, bill_type, bill_number, summary):
+def update_summary(conn, congress, bill_type, bill_number, text_part, summary):
     try:
         cursor = conn.cursor()
         cursor.execute("""
             UPDATE bill_text
             SET summary = ?
-            WHERE congress = ? AND bill_type = ? AND bill_number = ?
-        """, (summary, congress, bill_type, bill_number))
+            WHERE congress = ? AND bill_type = ? AND bill_number = ? AND text_part = ?
+        """, (summary, congress, bill_type, bill_number, text_part))
         conn.commit()
-        logging.info(f"Updated summary for bill {congress}.{bill_type}.{bill_number}")
+        logging.info(f"Updated summary for bill {congress}.{bill_type}.{bill_number}, text part: {text_part}")
     except sqlite3.Error as e:
         logging.error(f"Error updating summary: {str(e)}")
         raise
 
-def construct_prompt(congress, bill_type, bill_number, bill_title, previous_context, bill_text, next_context, bill_actions):
+def construct_prompt(congress, bill_type, bill_number, bill_title, previous_context, bill_text, next_context, bill_actions, text_part):
     today_date = datetime.date.today().strftime("%B %d, %Y")
     
     prompt = f"""<|begin_of_text|><|start_header_id|>system<|end_header_id|>
@@ -144,6 +144,7 @@ You are an unbiased reporter tasked with summarizing legislation. Provide a deta
 - Present insights chronologically if applicable
 - Include section numbers for referenced bill text
 - Use the provided information about bill types and key action meanings
+- This summary is for text part: {text_part}
 
 Today's date is {today_date}. Current sitting President: Joe Biden
 
@@ -153,6 +154,7 @@ Summarize the following legislation:
 Congress: {congress}
 Bill Title: {bill_title}
 Bill Type and Number: {bill_type}{bill_number}
+Text Part: {text_part}
 
 Previous Context:
 {previous_context}
@@ -168,7 +170,7 @@ Bill Actions:
 
 <|eot_id|><|start_header_id|>assistant<|end_header_id|>
 """
-    logging.info(f"Constructed summary prompt for bill {congress}.{bill_type}.{bill_number}")
+    logging.info(f"Constructed summary prompt for bill {congress}.{bill_type}.{bill_number}, text part: {text_part}")
     return prompt
 
 def generate_content(prompt):
@@ -183,11 +185,11 @@ def generate_content(prompt):
         logging.error(f"Error generating content: {str(e)}")
         raise
 
-def process_bill(conn_data, conn_text, congress, bill_type, bill_number, previous_context, bill_text, next_context, existing_summary):
+def process_bill(conn_data, conn_text, congress, bill_type, bill_number, text_part, previous_context, bill_text, next_context, existing_summary):
     try:
         # Check if summary already exists
         if existing_summary:
-            logging.info(f"Skipping bill {congress}.{bill_type}.{bill_number} - summary already exists")
+            logging.info(f"Skipping bill {congress}.{bill_type}.{bill_number}, text part: {text_part} - summary already exists")
             return False  # Indicate that the bill was skipped
 
         bill_info = get_bill_info(conn_data, congress, bill_type, bill_number)
@@ -198,20 +200,18 @@ def process_bill(conn_data, conn_text, congress, bill_type, bill_number, previou
             bill_title = bill_info[0]
             formatted_text_url = bill_url[0]
 
-            summary_prompt = construct_prompt(congress, bill_type, bill_number, bill_title, previous_context, bill_text, next_context, bill_actions)
+            summary_prompt = construct_prompt(congress, bill_type, bill_number, bill_title, previous_context, bill_text, next_context, bill_actions, text_part)
             summary = generate_content(summary_prompt)
-            # Commenting out summary with URL
-            # summary_with_url = f"{summary}\n\nSource: {formatted_text_url}"
-            update_summary(conn_text, congress, bill_type, bill_number, summary)
+            update_summary(conn_text, congress, bill_type, bill_number, text_part, summary)
 
-            logging.info(f"Successfully processed bill {congress}.{bill_type}.{bill_number}")
+            logging.info(f"Successfully processed bill {congress}.{bill_type}.{bill_number}, text part: {text_part}")
             return True  # Indicate that the bill was processed
         else:
-            logging.warning(f"Unable to find complete information for bill {congress}.{bill_type}.{bill_number}")
+            logging.warning(f"Unable to find complete information for bill {congress}.{bill_type}.{bill_number}, text part: {text_part}")
             return False  # Indicate that the bill was skipped due to incomplete information
 
     except Exception as e:
-        logging.error(f"Error processing bill {congress}.{bill_type}.{bill_number}: {str(e)}")
+        logging.error(f"Error processing bill {congress}.{bill_type}.{bill_number}, text part: {text_part}: {str(e)}")
         return False  # Indicate that the bill processing failed
 
 def main():
@@ -225,16 +225,14 @@ def main():
         all_bills = get_all_bills(conn_text)
 
         for bill in all_bills:
-            congress, bill_type, bill_number, previous_context, bill_text, next_context, existing_summary = bill
+            congress, bill_type, bill_number, text_part, previous_context, bill_text, next_context, existing_summary = bill
 
-            bill_processed = process_bill(conn_data, conn_text, congress, bill_type, bill_number, previous_context, bill_text, next_context, existing_summary)
+            bill_processed = process_bill(conn_data, conn_text, congress, bill_type, bill_number, text_part, previous_context, bill_text, next_context, existing_summary)
             
             if bill_processed:
-                logging.info(f"Bill processed")
-                # no timer needed for local llm
-                # time.sleep(120)
+                logging.info(f"Bill processed: {congress}.{bill_type}.{bill_number}, text part: {text_part}")
             else:
-                logging.info(f"Skipped waiting period for bill {congress}.{bill_type}.{bill_number}")
+                logging.info(f"Skipped bill {congress}.{bill_type}.{bill_number}, text part: {text_part}")
 
         conn_data.close()
         conn_text.close()
