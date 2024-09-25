@@ -33,7 +33,7 @@ def get_bill_info(conn, congress, bill_type, bill_number):
     try:
         cursor = conn.cursor()
         cursor.execute("""
-            SELECT title
+            SELECT title, importance
             FROM active_bill_list
             WHERE congress = ? AND billType = ? AND billNumber = ?
         """, (congress, bill_type, bill_number))
@@ -66,37 +66,79 @@ def get_bill_actions(conn, congress, bill_type, bill_number):
         logging.error(f"Error retrieving bill actions: {str(e)}")
         raise
 
-def get_bill_text_parts(conn, congress, bill_type, bill_number):
+def get_bill_text_parts_with_summaries(conn, congress, bill_type, bill_number):
     try:
         cursor = conn.cursor()
         cursor.execute("""
-            SELECT text_part, bill_text, summary
+            SELECT text_part, summary
             FROM bill_text
-            WHERE congress = ? AND bill_type = ? AND bill_number = ?
+            WHERE congress = ? AND bill_type = ? AND bill_number = ? AND summary IS NOT NULL AND summary != ''
             ORDER BY text_part
         """, (congress, bill_type, bill_number))
         result = cursor.fetchall()
         if result:
-            logging.info(f"Retrieved {len(result)} bill text parts for {congress}.{bill_type}.{bill_number}")
+            logging.info(f"Retrieved {len(result)} bill text parts with summaries for {congress}.{bill_type}.{bill_number}")
         else:
-            logging.warning(f"No bill text parts found for {congress}.{bill_type}.{bill_number}")
+            logging.warning(f"No bill text parts with summaries found for {congress}.{bill_type}.{bill_number}")
         return result
     except sqlite3.Error as e:
-        logging.error(f"Error retrieving bill text parts: {str(e)}")
+        logging.error(f"Error retrieving bill text parts with summaries: {str(e)}")
         raise
 
-def get_all_bills(conn):
+def get_bills_needing_importance(conn_data, conn_text):
     try:
-        cursor = conn.cursor()
-        cursor.execute("""
-            SELECT congress, billType, billNumber, importance
-            FROM active_bill_list
+        cursor_data = conn_data.cursor()
+        cursor_text = conn_text.cursor()
+        
+        logging.info("Querying bill_text for bills with summaries")
+        cursor_text.execute("""
+            SELECT DISTINCT congress, bill_type, bill_number
+            FROM bill_text
+            WHERE summary IS NOT NULL AND summary != ''
         """)
-        result = cursor.fetchall()
-        logging.info(f"Retrieved {len(result)} bills from active_bill_list table")
-        return result
+        bills_with_summaries = cursor_text.fetchall()
+        logging.info(f"Found {len(bills_with_summaries)} bills with summaries")
+        
+        if not bills_with_summaries:
+            logging.warning("No bills found with summaries")
+            return []
+        
+        # Log a sample of bills with summaries
+        sample_bills = bills_with_summaries[:5]
+        logging.info(f"Sample bills with summaries: {sample_bills}")
+        
+        # Prepare the query to find bills needing importance ratings
+        placeholders = ','.join(['(?,?,?)' for _ in bills_with_summaries])
+        query = f"""
+            SELECT congress, billType, billNumber
+            FROM active_bill_list
+            WHERE (congress, billType, billNumber) IN ({placeholders})
+            AND (importance IS NULL OR importance = '')
+        """
+        
+        # Flatten the list of tuples for the query parameters
+        params = [item for sublist in bills_with_summaries for item in sublist]
+        
+        logging.info("Querying active_bill_list for bills needing importance ratings")
+        cursor_data.execute(query, params)
+        bills_needing_importance = cursor_data.fetchall()
+        
+        logging.info(f"Found {len(bills_needing_importance)} bills needing importance ratings")
+        
+        if not bills_needing_importance:
+            logging.warning("No bills found that need importance ratings")
+        else:
+            # Log a sample of bills needing importance ratings
+            sample_bills = bills_needing_importance[:5]
+            logging.info(f"Sample bills needing importance ratings: {sample_bills}")
+        
+        return bills_needing_importance
+    
     except sqlite3.Error as e:
-        logging.error(f"Error retrieving all bills: {str(e)}")
+        logging.error(f"SQLite error in get_bills_needing_importance: {str(e)}")
+        raise
+    except Exception as e:
+        logging.error(f"Unexpected error in get_bills_needing_importance: {str(e)}")
         raise
 
 def update_importance(conn, congress, bill_type, bill_number, importance):
@@ -116,13 +158,13 @@ def update_importance(conn, congress, bill_type, bill_number, importance):
 def construct_prompt(congress, bill_type, bill_number, bill_title, bill_text_parts, bill_actions):
     today_date = datetime.date.today().strftime("%B %d, %Y")
     
-    bill_summaries = "\n".join([f"Part {part}: {summary}" for part, _, summary in bill_text_parts])
+    bill_summaries = "\n".join([f"Part {part}: {summary}" for part, summary in bill_text_parts])
     actions_text = "\n".join([f"{date}: {action}" for date, action in bill_actions])
     
     prompt = f"""<|begin_of_text|><|start_header_id|>system<|end_header_id|>
 Cutting Knowledge Date: December 2023
 Today Date: {today_date}
-You are a helpful assistant tasked with providing a concise assessment of legislative importance. Your response should be a single word chosen from "Must Know", "Important", or "Minimal". This assessment should be based on the bill's potential impact on the nation and society, considering its full context and any controversial aspects from an unbiased perspective. Information about the current Congress, bill number, title, bill summaries, and actions will be provided. Note that any bill actions involving the President are always categorized as "Must Know".  Bills that have become public law are always "Must Know". Do not provide any additional context or explanation beyond the single-word response.<|eot_id|>
+You are a helpful assistant tasked with providing a concise assessment of legislative importance. Your response should be a single word chosen from "Must Know", "Important", or "Minimal". This assessment should be based on the bill's potential impact on the nation and society, considering its full context and any controversial aspects from an unbiased perspective. Information about the current Congress, bill number, title, bill summaries, and actions will be provided. Note that any bill actions involving the President are always categorized as "Must Know". Do not provide any additional context or explanation beyond the single-word response.<|eot_id|>
 
 <|start_header_id|>user<|end_header_id|>
 Please assess the importance of the following bill:
@@ -155,67 +197,83 @@ def generate_content(prompt):
         logging.error(f"Error generating content: {str(e)}")
         raise
 
-def process_bill(conn_data, conn_text, congress, bill_type, bill_number, existing_importance):
+def process_bill(conn_data, conn_text, congress, bill_type, bill_number):
     try:
-        # Check if importance already exists
-        if existing_importance:
-            logging.info(f"Skipping bill {congress}.{bill_type}.{bill_number} - importance already exists")
-            return False  # Indicate that the bill was skipped
-
         bill_info = get_bill_info(conn_data, congress, bill_type, bill_number)
+        if not bill_info:
+            logging.warning(f"No bill info found for {congress}.{bill_type}.{bill_number}. Skipping.")
+            return False
+
+        bill_title, existing_importance = bill_info
+
+        if existing_importance:
+            logging.info(f"Importance already exists for bill {congress}.{bill_type}.{bill_number}. Skipping.")
+            return False
+
         bill_actions = get_bill_actions(conn_data, congress, bill_type, bill_number)
-        bill_text_parts = get_bill_text_parts(conn_text, congress, bill_type, bill_number)
+        bill_text_parts = get_bill_text_parts_with_summaries(conn_text, congress, bill_type, bill_number)
 
-        if bill_info and bill_actions and bill_text_parts:
-            bill_title = bill_info[0]
+        if not bill_text_parts:
+            logging.warning(f"No bill text parts with summaries found for {congress}.{bill_type}.{bill_number}. Skipping.")
+            return False
 
-            importance_prompt = construct_prompt(congress, bill_type, bill_number, bill_title, bill_text_parts, bill_actions)
-            importance = generate_content(importance_prompt)
-            
-            if importance not in ["Must Know", "Important", "Minimal"]:
-                logging.warning(f"Invalid importance rating '{importance}' for bill {congress}.{bill_type}.{bill_number}. Skipping update.")
-                return False
+        importance_prompt = construct_prompt(congress, bill_type, bill_number, bill_title, bill_text_parts, bill_actions)
+        importance = generate_content(importance_prompt)
+        
+        if importance not in ["Must Know", "Important", "Minimal"]:
+            logging.warning(f"Invalid importance rating '{importance}' for bill {congress}.{bill_type}.{bill_number}. Skipping update.")
+            return False
 
-            update_importance(conn_data, congress, bill_type, bill_number, importance)
+        update_importance(conn_data, congress, bill_type, bill_number, importance)
 
-            logging.info(f"Successfully processed bill {congress}.{bill_type}.{bill_number}")
-            return True  # Indicate that the bill was processed
-        else:
-            logging.warning(f"Unable to find complete information for bill {congress}.{bill_type}.{bill_number}")
-            return False  # Indicate that the bill was skipped due to incomplete information
+        logging.info(f"Successfully processed bill {congress}.{bill_type}.{bill_number}")
+        return True
 
     except Exception as e:
         logging.error(f"Error processing bill {congress}.{bill_type}.{bill_number}: {str(e)}")
-        return False  # Indicate that the bill processing failed
+        return False
 
 def main():
     try:
+        logging.info("Starting main function")
+        
         active_bill_data_db = os.path.join(script_dir, 'sys_db', 'active_bill_data.db')
         active_bill_text_db = os.path.join(script_dir, 'sys_db', 'active_bill_text.db')
 
+        logging.info(f"Connecting to active_bill_data.db at {active_bill_data_db}")
         conn_data = connect_to_db(active_bill_data_db)
+        
+        logging.info(f"Connecting to active_bill_text.db at {active_bill_text_db}")
         conn_text = connect_to_db(active_bill_text_db)
 
-        all_bills = get_all_bills(conn_data)
+        logging.info("Retrieving bills needing importance ratings")
+        bills_needing_importance = get_bills_needing_importance(conn_data, conn_text)
 
-        for bill in all_bills:
-            congress, bill_type, bill_number, existing_importance = bill
+        logging.info(f"Processing {len(bills_needing_importance)} bills")
+        for i, bill in enumerate(bills_needing_importance, 1):
+            congress, bill_type, bill_number = bill
+            logging.info(f"Processing bill {i}/{len(bills_needing_importance)}: {congress}.{bill_type}.{bill_number}")
 
-            bill_processed = process_bill(conn_data, conn_text, congress, bill_type, bill_number, existing_importance)
+            bill_processed = process_bill(conn_data, conn_text, congress, bill_type, bill_number)
             
             if bill_processed:
-                logging.info(f"Bill processed: {congress}.{bill_type}.{bill_number}")
+                logging.info(f"Successfully processed bill: {congress}.{bill_type}.{bill_number}")
             else:
-                logging.info(f"Skipped bill {congress}.{bill_type}.{bill_number}")
+                logging.warning(f"Failed to process bill: {congress}.{bill_type}.{bill_number}")
 
         conn_data.close()
         conn_text.close()
         logging.info("Database connections closed")
+        logging.info("Main function completed successfully")
 
     except Exception as e:
-        logging.critical(f"An unexpected error occurred: {str(e)}")
+        logging.critical(f"Critical error in main function: {str(e)}")
+        raise
 
 if __name__ == "__main__":
     logging.info("Script execution started")
-    main()
+    try:
+        main()
+    except Exception as e:
+        logging.critical(f"Unhandled exception in script: {str(e)}")
     logging.info("Script execution completed")
