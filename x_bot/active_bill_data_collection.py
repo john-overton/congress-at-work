@@ -7,7 +7,7 @@ from google.generativeai.types import HarmCategory, HarmBlockThreshold
 import sys
 import time
 import secrets
-import glob
+import re
 
 # Get the absolute path of the script
 script_path = os.path.abspath(__file__)
@@ -118,11 +118,15 @@ def get_bill_actions(conn, congress, bill_type, bill_number):
         raise
 
 def find_bill_file(bill_text_dir, congress, bill_type, bill_number):
-    pattern = os.path.join(bill_text_dir, f"{congress}.{bill_type}.{bill_number}.*.htm")
-    matching_files = glob.glob(pattern)
-    if matching_files:
-        # Sort the files by modification time and return the most recent one
-        return max(matching_files, key=os.path.getmtime)
+    logging.info(f"Bill text directory is: {bill_text_dir}")
+    logging.debug(f"Looking for bill file: {congress}.{bill_type}.{bill_number}")
+    for filename in os.listdir(bill_text_dir):
+        if filename.endswith('.htm'):
+            # This regex pattern is more flexible and will match variations in naming
+            pattern = rf"{congress}\.{bill_type}\.{bill_number}\."
+            if re.search(pattern, filename):
+                return os.path.join(bill_text_dir, filename)
+    logging.warning(f"No bill file found for {congress}.{bill_type}.{bill_number}")
     return None
 
 def get_bill_text(bill_file):
@@ -140,10 +144,17 @@ def get_bill_text(bill_file):
 
 def construct_prompt(congress, bill_type, bill_number, bill_title, bill_text, bill_actions):
     today_date = datetime.date.today().strftime("%B %d, %Y")
+    bill_text_preview = bill_text[:15] if bill_text else "N/A"
+    bill_actions_preview = bill_actions[:15] if bill_actions else "N/A"
     
     prompt = f"""
     <Instructions>
-    As an unbiased reporter, provide a comprehensive tweet about the recent important actions and key facts of this legislation. The tweet should be 3-4 paragraphs long. Do not include a title or hashtags in the response. Focus on the most recent and significant developments, providing context from the bill text if appropriate. Always include the section of the text if referencing it. Do not provide any party affiliations of sponsors or co-sponsors.
+    As an unbiased reporter, provide a short report about the recent important actions and key facts of this legislation.
+    The report should be 4-5 paragraphs long.
+    Do not include a title in the response.
+    Focus on the most recent and significant developments, and provide key, important facts from the bill text.
+    Always include the section notation of the text if referencing it so that your reader can easily look it up.
+    Do not provide any party affiliations of sponsors or co-sponsors.
     </Instructions>
     <Additional Details>
     Today's date is {today_date}. Current sitting President: Joe Biden
@@ -166,7 +177,7 @@ def construct_prompt(congress, bill_type, bill_number, bill_title, bill_text, bi
     {bill_actions}
     </Bill Actions>
     """
-    logging.info(f"Constructed prompt for bill {congress}.{bill_type}.{bill_number}")
+    logging.info(f"Constructed prompt for bill {congress}.{bill_type}.{bill_number}.  Here is the info included.. Date: {today_date} \ Bill text preview: {bill_text_preview} \ Bill actions preview: {bill_actions_preview}.")
     return prompt
 
 def generate_tweet(prompt):
@@ -225,7 +236,7 @@ def main():
     try:
         active_bill_data_db = os.path.join(parent_dir, 'congress_api_scraper', 'sys_db', 'active_bill_data.db')
         active_bills_tweets_db = os.path.join(script_dir, 'DB', 'active_bills_tweets.db')
-        bill_text_dir = os.path.join(parent_dir, 'congress_api_scraper', 'law_text_htm')
+        bill_text_dir = os.path.join(parent_dir, 'congress_api_scraper', 'active_bill_text_htm')
 
         conn_data = connect_to_db(active_bill_data_db)
         conn_tweets = connect_to_db(active_bills_tweets_db)
@@ -249,7 +260,7 @@ def main():
             else:
                 logging.warning(f"Failed to insert tweet for bill {congress}.{bill_type}.{bill_number}")
 
-            time.sleep(60)  # Wait for 1 minute before processing the next bill
+            time.sleep(15)  # Wait for 15 seconds before processing the next bill
 
         conn_data.close()
         conn_tweets.close()
