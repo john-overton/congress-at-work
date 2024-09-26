@@ -188,7 +188,7 @@ def construct_title_prompt(congress, bill_type, bill_number, bill_title, bill_te
     
     prompt = f"""
     <Instructions>
-    As an unbiased reporter, provide a concise and informative title for a tweet about the recent important actions and key facts of this legislation.
+    As an unbiased reporter, provide a concise and informative title for a tweet about the most recent important action and key facts of this legislation.
     The title should be no longer than 100 characters.
     Focus on the most recent and significant developments, or a key important fact from the bill text.
     Do not include any party affiliations of sponsors or co-sponsors.
