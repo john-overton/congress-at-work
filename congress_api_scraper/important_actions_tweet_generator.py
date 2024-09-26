@@ -347,9 +347,9 @@ def update_tweet_created(conn, congress, bill_type, bill_number):
 
 def main():
     try:
-        active_bill_data_db = os.path.join(parent_dir, 'congress_api_scraper', 'sys_db', 'active_bill_data.db')
-        active_bills_tweets_db = os.path.join(script_dir, 'DB', 'active_bills_tweets.db')
-        bill_text_dir = os.path.join(parent_dir, 'congress_api_scraper', 'active_bill_text_htm')
+        active_bill_data_db = os.path.join(script_dir, 'sys_db', 'active_bill_data.db')
+        active_bills_tweets_db = os.path.join(parent_dir, 'x_bot', 'DB', 'active_bills_tweets.db')
+        bill_text_dir = os.path.join(script_dir, 'active_bill_text_htm')
 
         conn_data = connect_to_db(active_bill_data_db)
         conn_tweets = connect_to_db(active_bills_tweets_db)

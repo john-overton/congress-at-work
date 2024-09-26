@@ -7,5 +7,5 @@ SCRIPT_LIST = [
         "get_active_bills_urls.py",
         "add_update_active_bill_text.py",
         "active_bill_data_collection_summary_local.py",
-        "active_bill_data_importance_collection_local.py",
+        "active_bill_importance_collection_local.py",
         ]

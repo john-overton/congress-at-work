@@ -123,7 +123,7 @@ def insert_or_update_bills(bills):
                 UPDATE active_bill_list SET
                 originChamber = ?, originChamberCode = ?, latestActionDate = ?, 
                 latestActionText = ?, updateDate = ?, url = ?, 
-                actions_updated = 0, insert_date = CURRENT_TIMESTAMP
+                actions_updated = 0, importance = '', tweet_created = 0, insert_date = CURRENT_TIMESTAMP
                 WHERE congress = ? AND billNumber = ? AND billType = ? AND title = ?
                 ''', (
                     bill["originChamber"],
