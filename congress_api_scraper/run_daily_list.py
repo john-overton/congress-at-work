@@ -6,6 +6,7 @@ SCRIPT_LIST = [
         "get_active_bill_actions.py",
         "get_active_bills_urls.py",
         "add_update_active_bill_text.py",
+        "active_bill_tokenizer_15000.py",
         "active_bill_data_collection_summary_local.py",
         "active_bill_importance_collection_local.py",
         ]

@@ -2,6 +2,7 @@ import os
 import sqlite3
 import datetime
 import logging
+import re
 from ollama import Client
 
 # Get the absolute path of the script
@@ -19,6 +20,9 @@ logging.basicConfig(filename=log_file, level=logging.INFO,
 client = Client(host='http://localhost:10001')
 model = 'llama3.1:8b-instruct-q8_0'
 
+# Compile the regex pattern
+MUST_KNOW_PATTERN = re.compile(r'\b(President|Public Law)\b', re.IGNORECASE)
+
 def connect_to_db(db_path):
     try:
         conn = sqlite3.connect(db_path)
@@ -33,7 +37,7 @@ def get_bill_info(conn, congress, bill_type, bill_number):
     try:
         cursor = conn.cursor()
         cursor.execute("""
-            SELECT title, importance
+            SELECT title, importance, latestActionText
             FROM active_bill_list
             WHERE congress = ? AND billType = ? AND billNumber = ?
         """, (congress, bill_type, bill_number))
@@ -162,9 +166,13 @@ def construct_prompt(congress, bill_type, bill_number, bill_title, bill_text_par
     actions_text = "\n".join([f"{date}: {action}" for date, action in bill_actions])
     
     prompt = f"""<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-Cutting Knowledge Date: December 2023
 Today Date: {today_date}
-You are a helpful assistant tasked with providing a concise assessment of legislative importance. Your response should be a single word chosen from "Must Know", "Important", or "Minimal". This assessment should be based on the bill's potential impact on the nation and society, considering its full context and any controversial aspects from an unbiased perspective. Information about the current Congress, bill number, title, bill summaries, and actions will be provided. Note that any bill actions involving the President are always categorized as "Must Know". Do not provide any additional context or explanation beyond the single-word response.<|eot_id|>
+You are a helpful assistant tasked with providing a concise assessment of legislative importance. 
+Your response should be a single word chosen from "Must Know", "Important", or "Minimal". 
+This assessment should be based on the bill's potential impact on the nation and society, considering its full context and any controversial aspects from an unbiased perspective. 
+Information about the current Congress, bill number, title, bill summaries, and actions will be provided. 
+Note that any bill actions involving the President are always categorized as "Must Know".
+Do not provide any additional context or explanation beyond the single-word response.<|eot_id|>
 
 <|start_header_id|>user<|end_header_id|>
 Please assess the importance of the following bill:
@@ -204,11 +212,18 @@ def process_bill(conn_data, conn_text, congress, bill_type, bill_number):
             logging.warning(f"No bill info found for {congress}.{bill_type}.{bill_number}. Skipping.")
             return False
 
-        bill_title, existing_importance = bill_info
+        bill_title, existing_importance, latest_action_text = bill_info
 
         if existing_importance:
             logging.info(f"Importance already exists for bill {congress}.{bill_type}.{bill_number}. Skipping.")
             return False
+
+        # Check if "President" or "Public Law" exists in the latestActionText using regex
+        if MUST_KNOW_PATTERN.search(latest_action_text):
+            importance = "Must Know"
+            logging.info(f"Bill {congress}.{bill_type}.{bill_number} involves President or Public Law. Setting importance to 'Must Know'.")
+            update_importance(conn_data, congress, bill_type, bill_number, importance)
+            return True
 
         bill_actions = get_bill_actions(conn_data, congress, bill_type, bill_number)
         bill_text_parts = get_bill_text_parts_with_summaries(conn_text, congress, bill_type, bill_number)
