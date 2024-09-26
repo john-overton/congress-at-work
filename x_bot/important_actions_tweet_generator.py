@@ -93,9 +93,10 @@ def get_must_know_bills(conn, days=30):
             FROM active_bill_list
             WHERE importance = 'Must Know'
             AND latestActionDate >= ?
+            AND tweet_created = 0
         """, (cutoff_date.isoformat(),))
         result = cursor.fetchall()
-        logging.info(f"Retrieved {len(result)} 'Must Know' bills from the last {days} days")
+        logging.info(f"Retrieved {len(result)} 'Must Know' bills from the last {days} days with tweet_created = 0")
         return result
     except sqlite3.Error as e:
         logging.error(f"Error retrieving 'Must Know' bills: {str(e)}")
@@ -180,6 +181,72 @@ def construct_prompt(congress, bill_type, bill_number, bill_title, bill_text, bi
     logging.info(f"Constructed prompt for bill {congress}.{bill_type}.{bill_number}.  Here is the info included.. Date: {today_date} \ Bill text preview: {bill_text_preview} \ Bill actions preview: {bill_actions_preview}.")
     return prompt
 
+def construct_title_prompt(congress, bill_type, bill_number, bill_title, bill_text, bill_actions):
+    today_date = datetime.date.today().strftime("%B %d, %Y")
+    bill_text_preview = bill_text[:15] if bill_text else "N/A"
+    bill_actions_preview = bill_actions[:15] if bill_actions else "N/A"
+    
+    prompt = f"""
+    <Instructions>
+    As an unbiased reporter, provide a concise and informative title for a tweet about the recent important actions and key facts of this legislation.
+    The title should be no longer than 100 characters.
+    Focus on the most recent and significant developments, or a key important fact from the bill text.
+    Do not include any party affiliations of sponsors or co-sponsors.
+    </Instructions>
+    <Additional Details>
+    Today's date is {today_date}. Current sitting President: Joe Biden
+    Key action meanings:
+    "Presented to President" - This means the legislation has been brought forward to the President's office but the legislation has not yet been signed or vetoed.
+    "Signed by President" - This means the legislation has been signed by the president and become public law.
+    </Additional Details>
+
+    <Congress>{congress}</Congress>
+    <Bill Title>{bill_title}</Bill Title>
+    <Bill Number>{bill_type}{bill_number}</Bill Number>
+    <Bill Text>
+    {bill_text}
+    </Bill Text>
+    <Bill Actions>
+    {bill_actions}
+    </Bill Actions>
+    """
+    logging.info(f"Constructed title prompt for bill {congress}.{bill_type}.{bill_number}")
+    return prompt
+
+def construct_hashtag_prompt(congress, bill_type, bill_number, bill_title, bill_text, bill_actions):
+    today_date = datetime.date.today().strftime("%B %d, %Y")
+    bill_text_preview = bill_text[:15] if bill_text else "N/A"
+    bill_actions_preview = bill_actions[:15] if bill_actions else "N/A"
+    
+    prompt = f"""
+    <Instructions>
+    As an unbiased reporter, provide 5 relevant hashtags for a tweet about the recent important actions and key facts of this legislation.
+    One hashtag should always include the bill number in the format #{{congress}}_{{bill_type}}{{bill_number}} (e.g., #118_S_2024).
+    If the bill has become a public law, use the format #PL{{congress}}_{{law_number}} instead (e.g., #PL118_53).
+    The other hashtags should be related to the bill's content, recent actions, or key topics.
+    Do not include any party affiliations or politician names in the hashtags.
+    Provide only the hashtags, separated by spaces, without any additional text or explanation.
+    </Instructions>
+    <Additional Details>
+    Today's date is {today_date}. Current sitting President: Joe Biden
+    Key action meanings:
+    "Presented to President" - This means the legislation has been brought forward to the President's office but the legislation has not yet been signed or vetoed.
+    "Signed by President" - This means the legislation has been signed by the president and become public law.
+    </Additional Details>
+
+    <Congress>{congress}</Congress>
+    <Bill Title>{bill_title}</Bill Title>
+    <Bill Number>{bill_type}{bill_number}</Bill Number>
+    <Bill Text>
+    {bill_text}
+    </Bill Text>
+    <Bill Actions>
+    {bill_actions}
+    </Bill Actions>
+    """
+    logging.info(f"Constructed hashtag prompt for bill {congress}.{bill_type}.{bill_number}")
+    return prompt
+
 def generate_tweet(prompt):
     try:
         response = model.generate_content(prompt)
@@ -187,6 +254,38 @@ def generate_tweet(prompt):
         return response.text
     except Exception as e:
         logging.error(f"Error generating tweet content: {str(e)}")
+        raise
+
+def generate_title(prompt):
+    try:
+        response = model.generate_content(prompt)
+        logging.info("Generated title content from AI model")
+        return response.text.strip()
+    except Exception as e:
+        logging.error(f"Error generating title content: {str(e)}")
+        raise
+
+def generate_hashtags(prompt, congress, bill_type, bill_number):
+    try:
+        response = model.generate_content(prompt)
+        hashtags = response.text.strip().split()
+        
+        # Ensure the bill number hashtag is included and in the correct format
+        bill_hashtag = f"#{congress}_{bill_type}{bill_number}"
+        if not any(h.upper() == bill_hashtag.upper() for h in hashtags):
+            if any(h.upper().startswith("#PL") for h in hashtags):
+                # If it's a public law, don't add the bill number hashtag
+                pass
+            else:
+                hashtags.insert(0, bill_hashtag)
+        
+        # Limit to 4 hashtags if more are generated
+        hashtags = hashtags[:4]
+        
+        logging.info(f"Generated hashtags for bill {congress}.{bill_type}.{bill_number}")
+        return " ".join(hashtags)
+    except Exception as e:
+        logging.error(f"Error generating hashtags: {str(e)}")
         raise
 
 def create_tweet_table(conn):
@@ -214,7 +313,7 @@ def create_tweet_table(conn):
         logging.error(f"Error creating tweet table: {str(e)}")
         raise
 
-def insert_tweet(conn, congress, bill_type, bill_number, tweet_body):
+def insert_tweet(conn, congress, bill_type, bill_number, tweet_body, tweet_title, hashtags):
     try:
         cursor = conn.cursor()
         tweet_id = secrets.token_hex(4)
@@ -222,15 +321,29 @@ def insert_tweet(conn, congress, bill_type, bill_number, tweet_body):
         
         cursor.execute('''
             INSERT INTO active_bills_tweets 
-            (congress, bill_type, bill_number, tweet_id, tweet_body, tweet_body_len, created_date)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        ''', (congress, bill_type, bill_number, tweet_id, tweet_body, len(tweet_body), created_date))
+            (congress, bill_type, bill_number, tweet_id, tweet_body, tweet_body_len, tweet_title, hashtags, created_date)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (congress, bill_type, bill_number, tweet_id, tweet_body, len(tweet_body), tweet_title, hashtags, created_date))
         conn.commit()
         logging.info(f"Inserted tweet for bill {congress}.{bill_type}.{bill_number}")
         return True
     except sqlite3.Error as e:
         logging.error(f"Error inserting tweet: {str(e)}")
         return False
+
+def update_tweet_created(conn, congress, bill_type, bill_number):
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE active_bill_list
+            SET tweet_created = 1
+            WHERE congress = ? AND billType = ? AND billNumber = ?
+        """, (congress, bill_type, bill_number))
+        conn.commit()
+        logging.info(f"Updated tweet_created to 1 for bill {congress}.{bill_type}.{bill_number}")
+    except sqlite3.Error as e:
+        logging.error(f"Error updating tweet_created: {str(e)}")
+        raise
 
 def main():
     try:
@@ -254,13 +367,22 @@ def main():
 
             prompt = construct_prompt(congress, bill_type, bill_number, bill_title, bill_text, bill_actions)
             tweet_body = generate_tweet(prompt)
+            time.sleep(5) # 5 Seconds between next API Call
 
-            if insert_tweet(conn_tweets, congress, bill_type, bill_number, tweet_body):
+            title_prompt = construct_title_prompt(congress, bill_type, bill_number, bill_title, bill_text, bill_actions)
+            tweet_title = generate_title(title_prompt)
+            time.sleep(5) # 5 Seconds between next API Call
+
+            hashtag_prompt = construct_hashtag_prompt(congress, bill_type, bill_number, bill_title, bill_text, bill_actions)
+            hashtags = generate_hashtags(hashtag_prompt, congress, bill_type, bill_number)
+
+            if insert_tweet(conn_tweets, congress, bill_type, bill_number, tweet_body, tweet_title, hashtags):
+                update_tweet_created(conn_data, congress, bill_type, bill_number)
                 logging.info(f"Successfully processed bill {congress}.{bill_type}.{bill_number}")
             else:
                 logging.warning(f"Failed to insert tweet for bill {congress}.{bill_type}.{bill_number}")
 
-            time.sleep(15)  # Wait for 15 seconds before processing the next bill
+            time.sleep(30)  # Wait for 30 seconds before processing the next bill
 
         conn_data.close()
         conn_tweets.close()
