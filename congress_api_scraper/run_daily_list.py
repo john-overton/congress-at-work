@@ -9,4 +9,5 @@ SCRIPT_LIST = [
         "active_bill_tokenizer_15000.py",
         "active_bill_data_collection_summary_local.py",
         "active_bill_importance_collection_local.py",
+        "important_actions_tweet_generator.py",
         ]

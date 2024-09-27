@@ -1,5 +1,5 @@
 # This script functions similar to the get_active_bills_base.py
-# EACH TIME THIS SCRIPT RUNS IT WILL PULL UPDATES FROM THE LAST 4 DAYS AND INSERT THEM IF THEY DO NOT EXIST
+# EACH TIME THIS SCRIPT RUNS IT WILL PULL UPDATES FROM THE LAST 4 DAYS AND INSERT OR UPDATE THEM
 
 import requests
 import sqlite3
@@ -48,7 +48,8 @@ def ensure_database():
         url TEXT,
         actions_updated INTEGER DEFAULT 0,
         insert_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-        importance TEXT
+        importance TEXT,
+        PRIMARY KEY (congress, billNumber, billType)
     )
     ''')
     conn.commit()
@@ -99,33 +100,32 @@ def insert_or_update_bills(bills):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
 
+    updated_count = 0
     inserted_count = 0
     for bill in bills:
-
         # Check if the bill already exists
         cursor.execute('''
-        SELECT updateDate FROM active_bill_list
-        WHERE congress = ? AND billNumber = ? AND billType = ? AND title = ? AND latestActionDate = ?
+        SELECT latestActionDate FROM active_bill_list
+        WHERE congress = ? AND billNumber = ? AND billType = ?
         ''', (
             bill["congress"],
             bill["number"],
-            bill["type"].lower(),
-            bill["title"],
-            bill["latestAction"]["actionDate"]
+            bill["type"].lower()
         ))
 
         existing_bill = cursor.fetchone()
 
         if existing_bill:
-            # If the existing bill is older, update it
-            if existing_bill[0] < bill["updateDate"]:
+            # Update the existing record if the new latestActionDate is more recent
+            if existing_bill[0] < bill["latestAction"]["actionDate"]:
                 cursor.execute('''
                 UPDATE active_bill_list SET
-                originChamber = ?, originChamberCode = ?, latestActionDate = ?, 
+                title = ?, originChamber = ?, originChamberCode = ?, latestActionDate = ?, 
                 latestActionText = ?, updateDate = ?, url = ?, 
-                actions_updated = 0, importance = '', tweet_created = 0, insert_date = CURRENT_TIMESTAMP
-                WHERE congress = ? AND billNumber = ? AND billType = ? AND title = ?
+                actions_updated = 0, importance = NULL, insert_date = CURRENT_TIMESTAMP, tweet_created = 0
+                WHERE congress = ? AND billNumber = ? AND billType = ?
                 ''', (
+                    bill["title"],
                     bill["originChamber"],
                     bill["originChamberCode"],
                     bill["latestAction"]["actionDate"],
@@ -134,10 +134,9 @@ def insert_or_update_bills(bills):
                     bill["url"],
                     bill["congress"],
                     bill["number"],
-                    bill["type"].lower(),
-                    bill["title"]
+                    bill["type"].lower()
                 ))
-                inserted_count += 1
+                updated_count += 1
         else:
             # Insert the new bill
             cursor.execute('''
@@ -161,12 +160,14 @@ def insert_or_update_bills(bills):
 
     conn.commit()
     conn.close()
-    return inserted_count
+    return updated_count, inserted_count
 
 def main():
     logging.info("Starting recent bill update process")
     ensure_database()
     total_bills = 0
+    total_updated = 0
+    total_inserted = 0
     offset = 0
     active_congress = get_active_congress()
     logging.info(f"Active Congress: {active_congress}")
@@ -177,11 +178,13 @@ def main():
             if not bills:
                 break
 
-            inserted_count = insert_or_update_bills(bills)
-            total_bills += inserted_count
+            updated_count, inserted_count = insert_or_update_bills(bills)
+            total_updated += updated_count
+            total_inserted += inserted_count
+            total_bills += len(bills)
             offset += len(bills)
 
-            logging.info(f"Fetched {len(bills)} bills, inserted/updated {inserted_count}. Total processed: {total_bills}")
+            logging.info(f"Fetched {len(bills)} bills, updated {updated_count}, inserted {inserted_count}. Total processed: {total_bills}")
 
             if len(bills) < 250:  # If we get less than the maximum, we've reached the end
                 break
@@ -192,7 +195,7 @@ def main():
             logging.error(f"Error fetching data: {e}")
             break
 
-    logging.info(f"Completed. Total bills inserted or updated: {total_bills}")
+    logging.info(f"Completed. Total bills processed: {total_bills}, updated: {total_updated}, inserted: {total_inserted}")
 
 if __name__ == "__main__":
     main()

@@ -84,7 +84,7 @@ def connect_to_db(db_path):
         logging.error(f"Error connecting to database {db_path}: {str(e)}")
         raise
 
-def get_must_know_bills(conn, days=30):
+def get_must_know_bills(conn, days=90):
     cutoff_date = datetime.date.today() - datetime.timedelta(days=days)
     try:
         cursor = conn.cursor()
