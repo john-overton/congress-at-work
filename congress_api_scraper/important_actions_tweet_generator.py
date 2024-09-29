@@ -118,6 +118,22 @@ def get_bill_actions(conn, congress, bill_type, bill_number):
         logging.error(f"Error retrieving bill actions: {str(e)}")
         raise
 
+def get_mostrecent_bill_action(conn, congress, bill_type, bill_number):
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT actionDate, actionText
+            FROM bill_actions
+            WHERE congress = ? AND billType = ? AND billNumber = ?
+            ORDER BY actionDate DESC LIMIT 1
+        """, (congress, bill_type, bill_number))
+        result = cursor.fetchall()
+        logging.info(f"Retrieved {len(result)} bill actions for {congress}.{bill_type}.{bill_number}")
+        return result
+    except sqlite3.Error as e:
+        logging.error(f"Error retrieving bill actions: {str(e)}")
+        raise
+
 def find_bill_file(bill_text_dir, congress, bill_type, bill_number):
     logging.info(f"Bill text directory is: {bill_text_dir}")
     logging.debug(f"Looking for bill file: {congress}.{bill_type}.{bill_number}")
@@ -143,10 +159,11 @@ def get_bill_text(bill_file):
         logging.error(f"Error reading bill text file {bill_file}: {str(e)}")
         return "Error reading bill text"
 
-def construct_prompt(congress, bill_type, bill_number, bill_title, bill_text, bill_actions):
+def construct_prompt(congress, bill_type, bill_number, bill_title, bill_text, bill_actions, mostrecent_bill_action):
     today_date = datetime.date.today().strftime("%B %d, %Y")
     bill_text_preview = bill_text[:15] if bill_text else "N/A"
     bill_actions_preview = bill_actions[:15] if bill_actions else "N/A"
+    mostrecent_bill_action_preview = mostrecent_bill_action[:15] if bill_actions else "N/A"
     
     prompt = f"""
     <Instructions>
@@ -158,6 +175,7 @@ def construct_prompt(congress, bill_type, bill_number, bill_title, bill_text, bi
     Do not provide any party affiliations of sponsors or co-sponsors.
     </Instructions>
     <Additional Details>
+    The most recent bill action is: "{mostrecent_bill_action}"
     Today's date is {today_date}. Current sitting President: Joe Biden
     Key action meanings:
     "Presented to President" - This means the legislation has been brought forward to the President's office but the legislation has not yet been signed or vetoed.
@@ -181,11 +199,12 @@ def construct_prompt(congress, bill_type, bill_number, bill_title, bill_text, bi
     logging.info(f"Constructed prompt for bill {congress}.{bill_type}.{bill_number}.  Here is the info included.. Date: {today_date} \ Bill text preview: {bill_text_preview} \ Bill actions preview: {bill_actions_preview}.")
     return prompt
 
-def construct_title_prompt(congress, bill_type, bill_number, bill_title, bill_text, bill_actions):
+def construct_title_prompt(congress, bill_type, bill_number, bill_title, bill_text, bill_actions, mostrecent_bill_action):
     today_date = datetime.date.today().strftime("%B %d, %Y")
     bill_text_preview = bill_text[:15] if bill_text else "N/A"
     bill_actions_preview = bill_actions[:15] if bill_actions else "N/A"
-    
+    mostrecent_bill_action_preview = mostrecent_bill_action[:15] if bill_actions else "N/A"
+
     prompt = f"""
     <Instructions>
     As an unbiased reporter, provide a concise and informative title for a tweet about the most recent important action and key facts of this legislation.
@@ -194,6 +213,7 @@ def construct_title_prompt(congress, bill_type, bill_number, bill_title, bill_te
     Do not include any party affiliations of sponsors or co-sponsors.
     </Instructions>
     <Additional Details>
+    The most recent bill action is: "{mostrecent_bill_action}"
     Today's date is {today_date}. Current sitting President: Joe Biden
     Key action meanings:
     "Presented to President" - This means the legislation has been brought forward to the President's office but the legislation has not yet been signed or vetoed.
@@ -213,10 +233,11 @@ def construct_title_prompt(congress, bill_type, bill_number, bill_title, bill_te
     logging.info(f"Constructed title prompt for bill {congress}.{bill_type}.{bill_number}")
     return prompt
 
-def construct_hashtag_prompt(congress, bill_type, bill_number, bill_title, bill_text, bill_actions):
+def construct_hashtag_prompt(congress, bill_type, bill_number, bill_title, bill_text, bill_actions, mostrecent_bill_action):
     today_date = datetime.date.today().strftime("%B %d, %Y")
     bill_text_preview = bill_text[:15] if bill_text else "N/A"
     bill_actions_preview = bill_actions[:15] if bill_actions else "N/A"
+    mostrecent_bill_action_preview = mostrecent_bill_action[:15] if bill_actions else "N/A"
     
     prompt = f"""
     <Instructions>
@@ -228,6 +249,7 @@ def construct_hashtag_prompt(congress, bill_type, bill_number, bill_title, bill_
     Provide only the hashtags, separated by spaces, without any additional text or explanation.
     </Instructions>
     <Additional Details>
+    The most recent bill action is: "{mostrecent_bill_action}"
     Today's date is {today_date}. Current sitting President: Joe Biden
     Key action meanings:
     "Presented to President" - This means the legislation has been brought forward to the President's office but the legislation has not yet been signed or vetoed.
@@ -361,19 +383,20 @@ def main():
         for bill in must_know_bills:
             congress, bill_type, bill_number, bill_title, _ = bill
             bill_actions = get_bill_actions(conn_data, congress, bill_type, bill_number)
+            mostrecent_bill_action = get_mostrecent_bill_action(conn_data, congress, bill_type, bill_number)
             
             bill_file = find_bill_file(bill_text_dir, congress, bill_type, bill_number)
             bill_text = get_bill_text(bill_file)
 
-            prompt = construct_prompt(congress, bill_type, bill_number, bill_title, bill_text, bill_actions)
+            prompt = construct_prompt(congress, bill_type, bill_number, bill_title, bill_text, bill_actions, mostrecent_bill_action)
             tweet_body = generate_tweet(prompt)
             time.sleep(5) # 5 Seconds between next API Call
 
-            title_prompt = construct_title_prompt(congress, bill_type, bill_number, bill_title, bill_text, bill_actions)
+            title_prompt = construct_title_prompt(congress, bill_type, bill_number, bill_title, bill_text, bill_actions, mostrecent_bill_action)
             tweet_title = generate_title(title_prompt)
             time.sleep(5) # 5 Seconds between next API Call
 
-            hashtag_prompt = construct_hashtag_prompt(congress, bill_type, bill_number, bill_title, bill_text, bill_actions)
+            hashtag_prompt = construct_hashtag_prompt(congress, bill_type, bill_number, bill_title, bill_text, bill_actions, mostrecent_bill_action)
             hashtags = generate_hashtags(hashtag_prompt, congress, bill_type, bill_number)
 
             if insert_tweet(conn_tweets, congress, bill_type, bill_number, tweet_body, tweet_title, hashtags):
