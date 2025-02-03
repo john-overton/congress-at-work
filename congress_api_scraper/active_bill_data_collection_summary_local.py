@@ -146,7 +146,7 @@ You are an unbiased reporter tasked with summarizing legislation. Provide a deta
 - Use the provided information about bill types and key action meanings
 - This summary is for text part: {text_part}
 
-Today's date is {today_date}. Current sitting President: Joe Biden
+Today's date is {today_date}. Current sitting President: Donald Trump
 
 <|eot_id|><|start_header_id|>user<|end_header_id|>
 Summarize the following legislation:

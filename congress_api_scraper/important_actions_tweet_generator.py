@@ -176,7 +176,7 @@ def construct_prompt(congress, bill_type, bill_number, bill_title, bill_text, bi
     </Instructions>
     <Additional Details>
     The most recent bill action is: "{mostrecent_bill_action}"
-    Today's date is {today_date}. Current sitting President: Joe Biden
+    Today's date is {today_date}. Joe Biden was President until Janurary 20, 2025. Current sitting President: Donald Trump
     Key action meanings:
     "Presented to President" - This means the legislation has been brought forward to the President's office but the legislation has not yet been signed or vetoed.
     "Signed by President" - This means the legislation has been signed by the president and become public law.
@@ -214,7 +214,7 @@ def construct_title_prompt(congress, bill_type, bill_number, bill_title, bill_te
     </Instructions>
     <Additional Details>
     The most recent bill action is: "{mostrecent_bill_action}"
-    Today's date is {today_date}. Current sitting President: Joe Biden
+    Today's date is {today_date}. Joe Biden was President until Janurary 20, 2025. Current sitting President: Donald Trump
     Key action meanings:
     "Presented to President" - This means the legislation has been brought forward to the President's office but the legislation has not yet been signed or vetoed.
     "Signed by President" - This means the legislation has been signed by the president and become public law.
@@ -250,7 +250,7 @@ def construct_hashtag_prompt(congress, bill_type, bill_number, bill_title, bill_
     </Instructions>
     <Additional Details>
     The most recent bill action is: "{mostrecent_bill_action}"
-    Today's date is {today_date}. Current sitting President: Joe Biden
+    Today's date is {today_date}. Joe Biden was President until Janurary 20, 2025. Current sitting President: Donald Trump
     Key action meanings:
     "Presented to President" - This means the legislation has been brought forward to the President's office but the legislation has not yet been signed or vetoed.
     "Signed by President" - This means the legislation has been signed by the president and become public law.
