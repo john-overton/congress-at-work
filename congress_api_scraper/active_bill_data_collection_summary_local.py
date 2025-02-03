@@ -17,8 +17,8 @@ logging.basicConfig(filename=log_file, level=logging.INFO,
                     format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Set up the Ollama client
-client = Client(host='http://localhost:10001')
-model = 'llama3.1:8b-instruct-q8_0'
+client = Client(host='http://localhost:11434')
+model = 'deepseek-r1:7b'
 
 def connect_to_db(db_path):
     try:
