@@ -269,9 +269,20 @@ def construct_hashtag_prompt(congress, bill_type, bill_number, bill_title, bill_
     logging.info(f"Constructed hashtag prompt for bill {congress}.{bill_type}.{bill_number}")
     return prompt
 
+def retry_on_429(func, *args, **kwargs):
+    while True:
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            if "429" in str(e):
+                logging.warning("Resource exhausted (429). Waiting 10 minutes before retrying...")
+                time.sleep(600)  # Wait 10 minutes
+                continue
+            raise
+
 def generate_tweet(prompt):
     try:
-        response = model.generate_content(prompt)
+        response = retry_on_429(model.generate_content, prompt)
         logging.info("Generated tweet content from AI model")
         return response.text
     except Exception as e:
@@ -280,7 +291,7 @@ def generate_tweet(prompt):
 
 def generate_title(prompt):
     try:
-        response = model.generate_content(prompt)
+        response = retry_on_429(model.generate_content, prompt)
         logging.info("Generated title content from AI model")
         return response.text.strip()
     except Exception as e:
@@ -289,7 +300,7 @@ def generate_title(prompt):
 
 def generate_hashtags(prompt, congress, bill_type, bill_number):
     try:
-        response = model.generate_content(prompt)
+        response = retry_on_429(model.generate_content, prompt)
         hashtags = response.text.strip().split()
         
         # Ensure the bill number hashtag is included and in the correct format
@@ -388,22 +399,27 @@ def main():
             bill_file = find_bill_file(bill_text_dir, congress, bill_type, bill_number)
             bill_text = get_bill_text(bill_file)
 
-            prompt = construct_prompt(congress, bill_type, bill_number, bill_title, bill_text, bill_actions, mostrecent_bill_action)
-            tweet_body = generate_tweet(prompt)
-            time.sleep(5) # 5 Seconds between next API Call
+            try:
+                prompt = construct_prompt(congress, bill_type, bill_number, bill_title, bill_text, bill_actions, mostrecent_bill_action)
+                tweet_body = generate_tweet(prompt)
+                time.sleep(5) # 5 Seconds between next API Call
 
-            title_prompt = construct_title_prompt(congress, bill_type, bill_number, bill_title, bill_text, bill_actions, mostrecent_bill_action)
-            tweet_title = generate_title(title_prompt)
-            time.sleep(5) # 5 Seconds between next API Call
+                title_prompt = construct_title_prompt(congress, bill_type, bill_number, bill_title, bill_text, bill_actions, mostrecent_bill_action)
+                tweet_title = generate_title(title_prompt)
+                time.sleep(5) # 5 Seconds between next API Call
 
-            hashtag_prompt = construct_hashtag_prompt(congress, bill_type, bill_number, bill_title, bill_text, bill_actions, mostrecent_bill_action)
-            hashtags = generate_hashtags(hashtag_prompt, congress, bill_type, bill_number)
+                hashtag_prompt = construct_hashtag_prompt(congress, bill_type, bill_number, bill_title, bill_text, bill_actions, mostrecent_bill_action)
+                hashtags = generate_hashtags(hashtag_prompt, congress, bill_type, bill_number)
 
-            if insert_tweet(conn_tweets, congress, bill_type, bill_number, tweet_body, tweet_title, hashtags):
-                update_tweet_created(conn_data, congress, bill_type, bill_number)
-                logging.info(f"Successfully processed bill {congress}.{bill_type}.{bill_number}")
-            else:
-                logging.warning(f"Failed to insert tweet for bill {congress}.{bill_type}.{bill_number}")
+                if insert_tweet(conn_tweets, congress, bill_type, bill_number, tweet_body, tweet_title, hashtags):
+                    update_tweet_created(conn_data, congress, bill_type, bill_number)
+                    logging.info(f"Successfully processed bill {congress}.{bill_type}.{bill_number}")
+                else:
+                    logging.warning(f"Failed to insert tweet for bill {congress}.{bill_type}.{bill_number}")
+
+            except Exception as e:
+                logging.error(f"Error processing bill {congress}.{bill_type}.{bill_number}: {str(e)}")
+                continue  # Continue with next bill even if this one fails
 
             time.sleep(30)  # Wait for 30 seconds before processing the next bill
 
