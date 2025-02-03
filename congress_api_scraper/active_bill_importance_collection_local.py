@@ -111,23 +111,34 @@ def get_bills_needing_importance(conn_data, conn_text):
         sample_bills = bills_with_summaries[:5]
         logging.info(f"Sample bills with summaries: {sample_bills}")
         
-        # Prepare the query to find bills needing importance ratings
-        placeholders = ','.join(['(?,?,?)' for _ in bills_with_summaries])
-        query = f"""
-            SELECT congress, billType, billNumber
-            FROM active_bill_list
-            WHERE (congress, billType, billNumber) IN ({placeholders})
-            AND (importance IS NULL OR importance = '')
-        """
+        # Process bills in batches of 1000
+        BATCH_SIZE = 1000
+        bills_needing_importance = []
         
-        # Flatten the list of tuples for the query parameters
-        params = [item for sublist in bills_with_summaries for item in sublist]
+        for i in range(0, len(bills_with_summaries), BATCH_SIZE):
+            batch = bills_with_summaries[i:i + BATCH_SIZE]
+            logging.info(f"Processing batch {i//BATCH_SIZE + 1} of {(len(bills_with_summaries) + BATCH_SIZE - 1)//BATCH_SIZE}")
+            
+            # Prepare the query for this batch
+            placeholders = ','.join(['(?,?,?)' for _ in batch])
+            query = f"""
+                SELECT congress, billType, billNumber
+                FROM active_bill_list
+                WHERE (congress, billType, billNumber) IN ({placeholders})
+                AND (importance IS NULL OR importance = '')
+            """
+            
+            # Flatten the list of tuples for the query parameters
+            params = [item for sublist in batch for item in sublist]
+            
+            logging.info(f"Querying active_bill_list for batch of {len(batch)} bills")
+            cursor_data.execute(query, params)
+            batch_results = cursor_data.fetchall()
+            bills_needing_importance.extend(batch_results)
+            
+            logging.info(f"Found {len(batch_results)} bills needing importance ratings in current batch")
         
-        logging.info("Querying active_bill_list for bills needing importance ratings")
-        cursor_data.execute(query, params)
-        bills_needing_importance = cursor_data.fetchall()
-        
-        logging.info(f"Found {len(bills_needing_importance)} bills needing importance ratings")
+        logging.info(f"Found total of {len(bills_needing_importance)} bills needing importance ratings")
         
         if not bills_needing_importance:
             logging.warning("No bills found that need importance ratings")
