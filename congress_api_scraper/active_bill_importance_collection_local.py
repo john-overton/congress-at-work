@@ -156,16 +156,16 @@ def get_bills_needing_importance(conn_data, conn_text):
         logging.error(f"Unexpected error in get_bills_needing_importance: {str(e)}")
         raise
 
-def update_importance(conn, congress, bill_type, bill_number, importance):
+def update_importance(conn, congress, bill_type, bill_number, importance, importance_analysis):
     try:
         cursor = conn.cursor()
         cursor.execute("""
             UPDATE active_bill_list
-            SET importance = ?
+            SET importance = ?, importance_analysis = ?
             WHERE congress = ? AND billType = ? AND billNumber = ?
-        """, (importance, congress, bill_type, bill_number))
+        """, (importance, importance_analysis, congress, bill_type, bill_number))
         conn.commit()
-        logging.info(f"Updated importance for bill {congress}.{bill_type}.{bill_number}")
+        logging.info(f"Updated importance and analysis for bill {congress}.{bill_type}.{bill_number}")
     except sqlite3.Error as e:
         logging.error(f"Error updating importance: {str(e)}")
         raise
@@ -211,7 +211,19 @@ def generate_content(prompt):
             prompt=prompt
         )
         logging.info("Generated content from local LLM")
-        return response['response'].strip()
+        raw_response = response['response'].strip()
+        
+        # Extract the importance rating
+        if "Must Know" in raw_response:
+            importance = "Must Know"
+        elif "Important" in raw_response:
+            importance = "Important"
+        elif "Minimal" in raw_response:
+            importance = "Minimal"
+        else:
+            importance = ""
+        
+        return importance, raw_response
     except Exception as e:
         logging.error(f"Error generating content: {str(e)}")
         raise
@@ -244,13 +256,13 @@ def process_bill(conn_data, conn_text, congress, bill_type, bill_number):
             return False
 
         importance_prompt = construct_prompt(congress, bill_type, bill_number, bill_title, bill_text_parts, bill_actions)
-        importance = generate_content(importance_prompt)
+        importance, raw_response = generate_content(importance_prompt)
         
         if importance not in ["Must Know", "Important", "Minimal"]:
-            logging.warning(f"Invalid importance rating '{importance}' for bill {congress}.{bill_type}.{bill_number}. Skipping update.")
+            logging.warning(f"Invalid importance rating '{importance}' for bill {congress}.{bill_type}.{bill_number}. Raw response: {raw_response}. Skipping update.")
             return False
 
-        update_importance(conn_data, congress, bill_type, bill_number, importance)
+        update_importance(conn_data, congress, bill_type, bill_number, importance, raw_response)
 
         logging.info(f"Successfully processed bill {congress}.{bill_type}.{bill_number}")
         return True
