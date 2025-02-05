@@ -1,9 +1,8 @@
 import os
 import sqlite3
-import datetime
 import logging
-# import time
 from ollama import Client
+from typing import  List, Tuple, Optional
 
 # Get the absolute path of the script
 script_path = os.path.abspath(__file__)
@@ -18,7 +17,17 @@ logging.basicConfig(filename=log_file, level=logging.DEBUG,
 
 # Set up the Ollama client
 client = Client(host='http://localhost:11434')
-model = 'deepseek-r1:32b'
+model = 'deepseek-r1:7b'
+
+# New: Quality control constants
+MINIMUM_SUMMARY_LENGTH = 500  # characters
+MAXIMUM_SUMMARY_LENGTH = 20000  # characters
+REQUIRED_ELEMENTS = [
+    'introduced',
+    'referred to',
+    'section',
+    'status'
+]
 
 def connect_to_db(db_path):
     try:
@@ -131,49 +140,65 @@ def update_summary(conn, congress, bill_type, bill_number, text_part, summary):
         logging.error(f"Error updating summary: {str(e)}")
         raise
 
-def parse_llm_response(response):
-    """Parse the LLM response to separate think content from summary"""
-    try:
-        # Extract think content
-        think_start = response.find("<think>")
-        think_end = response.find("</think>")
-        if think_start != -1 and think_end != -1:
-            think_content = response[think_start + 7:think_end].strip()
-            # Get summary content (everything after </think>)
-            summary_content = response[think_end + 8:].strip()
-            
-            logging.debug(f"Parsed think content: {think_content}")
-            logging.debug(f"Parsed summary content: {summary_content}")
-            
-            return think_content, summary_content
-        else:
-            logging.warning("No think tags found in response")
-            return None, response
-    except Exception as e:
-        logging.error(f"Error parsing LLM response: {str(e)}")
-        raise
 
-def construct_prompt(congress, bill_type, bill_number, bill_title, previous_context, bill_text, next_context, bill_actions, text_part):
-    today_date = datetime.date.today().strftime("%B %d, %Y")
+def validate_summary(summary: str) -> Tuple[bool, str]:
+    """
+    Validates the generated summary against quality control metrics.
+    Returns (is_valid, reason_if_invalid)
+    """
+    logging.debug(f"Validating summary of length {len(summary)} characters")
+    if len(summary) < MINIMUM_SUMMARY_LENGTH:
+        logging.debug(f"Summary validation failed: length {len(summary)} below minimum {MINIMUM_SUMMARY_LENGTH}")
+        return False, f"Summary too short ({len(summary)} chars)"
     
-    prompt = f"""<|Assistant|>
-You are an unbiased reporter tasked with summarizing legislation. Provide a detailed 4-5 paragraph summary of the given bill, including current actions and important facts. Follow these guidelines:
+    if len(summary) > MAXIMUM_SUMMARY_LENGTH:
+        logging.debug(f"Summary validation failed: length {len(summary)} exceeds maximum {MAXIMUM_SUMMARY_LENGTH}")
+        return False, f"Summary too long ({len(summary)} chars)"
+        
+    # Check for required content elements
+    missing_elements = []
+    for element in REQUIRED_ELEMENTS:
+        if element.lower() not in summary.lower():
+            missing_elements.append(element)
+    
+    if missing_elements:
+        return False, f"Missing required elements: {', '.join(missing_elements)}"
+    
+    # Check for speculation words
+    speculation_words = ['might', 'could', 'maybe', 'perhaps', 'possibly']
+    found_speculation = [word for word in speculation_words if word in summary.lower()]
+    if found_speculation:
+        return False, f"Contains speculation words: {', '.join(found_speculation)}"
+        
+    return True, "Valid summary"
 
-- Do not provide a title or helper text like "Here is a summary of [x]..."
-- Use plain text without formatting
-- Avoid bullet points or lists
-- Omit party affiliations of sponsors or co-sponsors
-- Present insights chronologically if applicable
-- Include section numbers for referenced bill text
-- Include references to specific sections, dates, and data points where applicable
-- Provide 4-5 well-structured paragraphs
-- Use the provided information about bill types and key action meanings
-- This summary is for text part: {text_part}
+def construct_prompt(congress: str, bill_type: str, bill_number: str, 
+                    bill_title: str, previous_context: str, bill_text: str, 
+                    next_context: str, bill_actions: List, text_part: int) -> str:
+    """
+    Constructs a prompt using the model's defined parameters and structure.
+    Includes validation for proper tag usage and content structure.
+    """
+    prompt = f"""<｜begin▁of▁sentence｜>
+Legislative Summary Protocol:
+Create a precise factual summary of the provided legislation. Include core provisions, status, and section references. Focus on text part {text_part}.
 
-Today's date is {today_date}.
+Requirements:
+1 Paragraph: State the bill number, introduction date, and primary purpose
+2-5 Paragraphs: Detail the main provisions with section numbers
+1 Paragraph: List any economic data, statistical information, or procedural requirements
+1 Paragraph: Document the current status and most recent legislative actions
 
-<|User|>
-Summarize the following legislation:
+Constraints:
+Start immediately with bill details
+Use only information from provided text
+Follow chronological order
+Include specific section references
+Exclude speculation and external context
+<｜end▁of▁sentence｜>
+
+<｜User｜>
+Legislative Document:
 
 Congress: {congress}
 Bill Title: {bill_title}
@@ -191,60 +216,85 @@ Next Context:
 
 Bill Actions:
 {bill_actions}
+<｜end▁of▁sentence｜>
 
-"""
+<｜Assistant｜>"""
+    
     logging.info(f"Constructed summary prompt for bill {congress}.{bill_type}.{bill_number}, text part: {text_part}")
-    logging.debug(f"Prompt: {prompt}")
+    logging.debug(f"Prompt content: {prompt}")
+    
     return prompt
 
-def generate_content(prompt):
-    try:
-        response = client.generate(
-            model=model,
-            prompt=prompt,
-            options={
-                "num_ctx": 50000,
-                "num_predict": 10000
-            }
-        )
-        logging.info(f"Generated content from local LLM")
-        
-        # Parse the response into think and summary sections
-        think_content, summary_content = parse_llm_response(response['response'])
-        
-        return summary_content
-    except Exception as e:
-        logging.error(f"Error generating content: {str(e)}")
-        raise
+def generate_content_with_retry(prompt: str, max_retries: int = 3) -> Optional[str]:
+    """
+    Generates content with retry logic and validation.
+    Returns validated summary or None if all attempts fail.
+    """
+    for attempt in range(max_retries):
+        try:
+            response = client.generate(
+                model=model,
+                prompt=prompt
+            )
+            summary = response['response']
+            
+            # Validate the generated summary
+            is_valid, reason = validate_summary(summary)
+            if is_valid:
+                logging.info(f"Generated valid summary on attempt {attempt + 1}")
+                logging.debug(f"Valid summary: {summary}")
+                return summary
+            else:
+                logging.warning(f"Generated invalid summary on attempt {attempt + 1}: {reason}")
+                continue
+                
+        except Exception as e:
+            logging.error(f"Error generating content (attempt {attempt + 1}): {str(e)}")
+            if attempt == max_retries - 1:
+                raise
+    
+    return None
 
-def process_bill(conn_data, conn_text, congress, bill_type, bill_number, text_part, previous_context, bill_text, next_context, existing_summary):
+def process_bill(conn_data: sqlite3.Connection, conn_text: sqlite3.Connection, 
+                congress: str, bill_type: str, bill_number: str, text_part: int,
+                previous_context: str, bill_text: str, next_context: str, 
+                existing_summary: str) -> bool:
+    """
+    Enhanced bill processing with quality controls and detailed logging.
+    """
+    logging.debug(f"Starting to process bill {congress}.{bill_type}.{bill_number}, text part: {text_part}")
+    logging.debug(f"Bill text length: {len(bill_text) if bill_text else 0} characters")
     try:
-        # Check if summary already exists
         if existing_summary:
-            #logging.info(f"Skipping bill {congress}.{bill_type}.{bill_number}, text part: {text_part} - summary already exists")
-            return False  # Indicate that the bill was skipped
+            logging.debug(f"Existing summary found for bill {congress}.{bill_type}.{bill_number}, text part: {text_part}")
+            logging.info(f"Skipping bill {congress}.{bill_type}.{bill_number}, text part: {text_part} - summary exists")
+            return False
 
         bill_info = get_bill_info(conn_data, congress, bill_type, bill_number)
         bill_url = get_bill_url(conn_data, congress, bill_type, bill_number)
         bill_actions = get_bill_actions(conn_data, congress, bill_type, bill_number)
 
-        if bill_info and bill_url and bill_actions:
-            bill_title = bill_info[0]
-            formatted_text_url = bill_url[0]
+        if not all([bill_info, bill_url, bill_actions]):
+            logging.warning(f"Incomplete information for bill {congress}.{bill_type}.{bill_number}")
+            return False
 
-            summary_prompt = construct_prompt(congress, bill_type, bill_number, bill_title, previous_context, bill_text, next_context, bill_actions, text_part)
-            summary = generate_content(summary_prompt)
+        bill_title = bill_info[0]
+        summary_prompt = construct_prompt(congress, bill_type, bill_number, bill_title, 
+                                       previous_context, bill_text, next_context, 
+                                       bill_actions, text_part)
+        
+        summary = generate_content_with_retry(summary_prompt)
+        if summary:
             update_summary(conn_text, congress, bill_type, bill_number, text_part, summary)
-
-            logging.info(f"Successfully processed bill {congress}.{bill_type}.{bill_number}, text part: {text_part}")
-            return True  # Indicate that the bill was processed
+            logging.info(f"Successfully processed bill {congress}.{bill_type}.{bill_number}")
+            return True
         else:
-            logging.warning(f"Unable to find complete information for bill {congress}.{bill_type}.{bill_number}, text part: {text_part}")
-            return False  # Indicate that the bill was skipped due to incomplete information
+            logging.error(f"Failed to generate valid summary for bill {congress}.{bill_type}.{bill_number}")
+            return False
 
     except Exception as e:
-        logging.error(f"Error processing bill {congress}.{bill_type}.{bill_number}, text part: {text_part}: {str(e)}")
-        return False  # Indicate that the bill processing failed
+        logging.error(f"Error processing bill {congress}.{bill_type}.{bill_number}: {str(e)}")
+        return False
 
 def main():
     try:
@@ -263,8 +313,8 @@ def main():
             
             if bill_processed:
                 logging.info(f"Bill processed: {congress}.{bill_type}.{bill_number}, text part: {text_part}")
-            # else:
-                # logging.info(f"Skipped bill {congress}.{bill_type}.{bill_number}, text part: {text_part}")
+            else:
+                logging.info(f"Skipped bill {congress}.{bill_type}.{bill_number}, text part: {text_part}")
 
         conn_data.close()
         conn_text.close()

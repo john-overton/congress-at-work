@@ -8,7 +8,7 @@ from nltk.tokenize import word_tokenize
 from bs4 import BeautifulSoup
 
 # constraints
-token_max_size = 15000
+token_max_size = 4096
 context_size = 500
 
 # Define the paths relative to the script's location
